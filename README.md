@@ -16,7 +16,8 @@ Dermis.collectionView
      
      
 #### Model View
- ```coffeescript
+
+```coffeescript
 Dermis.modelView
   model: require 'models/Match'
   notify: ['Date']
@@ -30,7 +31,9 @@ Dermis.modelView
     # ...
 
 #### Model 
+
 model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
+
 ```coffeescript  
 Dermis.model
   idAttribute: '_id'
