@@ -13,7 +13,7 @@ Dermis.collectionView
     if @items is null or @items?.length <= 0
       @items = span {}, "No Matches right now!"
     @items
-     
+```     
      
 #### Model View
 
@@ -31,6 +31,7 @@ Dermis.modelView
   render: ->
     user = @model.get('match')
     # ...
+```
 
 #### Model 
 
@@ -43,3 +44,4 @@ Dermis.model
   url:  '/v1/matches'
   initialize: ->
     @set 'match', new User @get 'match'
+```
