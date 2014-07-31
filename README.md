@@ -10,9 +10,9 @@ fission.collectionView
   itemView: require 'pages/Match/MatchItem/MatchItem.view'
   render: ->
 
-    if @items is null or @items?.length <= 0
-      @items = span {}, "No Matches right now!"
-    @items
+    if @items.length is 0
+      @items = span null, 'No Matches right now!'
+    return @items
 ```     
      
 #### Model View
