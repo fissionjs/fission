@@ -2,7 +2,7 @@
 
 
 #### Collection View 
-collectionView gets an array of @items - the collections' models rendered into their *itemView*
+collectionView gets an array of this.items - the collections' models rendered into their *itemView*
 
 ```js
 
@@ -25,7 +25,7 @@ fission.collectionView({
      
 #### Model View
 
-model view
+render gets this.model
 
 ```js
 
