@@ -60,5 +60,4 @@ fission.model({
   url: '/v1/matches'
 });
 
-
 ```
