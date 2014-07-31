@@ -1,8 +1,41 @@
 #fission
 
 
+#### Model 
+
+model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
+
+```js
+
+fission.model({
+  idAttribute: '_id',
+  name: 'Match',
+  url: '/v1/matches'
+});
+
+```
+
+#### Routing 
+
+```js
+var router = fission.router;
+
+router.use(fission.middleware.log);
+
+router.route('/', {
+  view: 'components/Match/Matches.view',
+  el: 'content'
+});
+
+router.route('/match/:id', {
+  view: 'components/Match/Match.view',
+  el: 'content'
+});
+
+```
+
 #### Collection View 
-collectionView gets an array of this.items - the collections' models rendered into their *itemView*
+collectionView gets an array of **this.items** - the collections' models rendered into their **itemView**
 
 ```js
 
@@ -25,7 +58,7 @@ fission.collectionView({
      
 #### Model View
 
-render gets this.model
+render gets **this.model** - a reference to the associated model either when either model or id is passed into **props** or via and *id* **params**  
 
 ```js
 
@@ -44,20 +77,6 @@ fission.modelView({
     var user = this.model.get('name');
     return span(null, 'name: ' + name);
   }
-});
-
-```
-
-#### Model 
-
-model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
-
-```js
-
-fission.model({
-  idAttribute: '_id',
-  name: 'Match',
-  url: '/v1/matches'
 });
 
 ```
