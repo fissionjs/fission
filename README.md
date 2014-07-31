@@ -5,7 +5,7 @@ fission
 collectionView gets an array of @items - the collections' models rendered into their *itemView*
 
 ```coffeescript
-Dermis.collectionView
+fission.collectionView
   model: require 'models/Match'
   itemView: require 'pages/Match/MatchItem/MatchItem.view'
   render: ->
@@ -20,7 +20,7 @@ Dermis.collectionView
 model view
 
 ```coffeescript
-Dermis.modelView
+fission.modelView
   model: require 'models/Match'
   notify: ['Date']
   dislike: -> @model.destroy()
@@ -38,7 +38,7 @@ Dermis.modelView
 model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
 
 ```coffeescript  
-Dermis.model
+fission.model
   idAttribute: '_id'
   name: 'Match'
   url:  '/v1/matches'
