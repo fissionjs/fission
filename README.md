@@ -17,6 +17,8 @@ Dermis.collectionView
      
 #### Model View
 
+model view
+
 ```coffeescript
 Dermis.modelView
   model: require 'models/Match'
