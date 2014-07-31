@@ -1,0 +1,40 @@
+fission
+=======
+
+#### Collection View 
+collectionView gets an array of @items - the collections' models rendered into their *itemView*
+
+```coffeescript
+Dermis.collectionView
+  model: require 'models/Match'
+  itemView: require 'pages/Match/MatchItem/MatchItem.view'
+  render: ->
+
+    if @items is null or @items?.length <= 0
+      @items = span {}, "No Matches right now!"
+    @items
+     
+     
+#### Model View
+ ```coffeescript
+Dermis.modelView
+  model: require 'models/Match'
+  notify: ['Date']
+  dislike: -> @model.destroy()
+  like: ->
+    @model.save {userApproved: true}, patch: true
+    @model.destroy()
+
+  render: ->
+    user = @model.get('match')
+    # ...
+
+#### Model 
+model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
+```coffeescript  
+Dermis.model
+  idAttribute: '_id'
+  name: 'Match'
+  url:  '/v1/matches'
+  initialize: ->
+    @set 'match', new User @get 'match'
