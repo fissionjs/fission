@@ -1,47 +1,60 @@
-fission
-=======
+#fission
+
 
 #### Collection View 
 collectionView gets an array of @items - the collections' models rendered into their *itemView*
 
-```coffeescript
-fission.collectionView
-  model: require 'models/Match'
-  itemView: require 'pages/Match/MatchItem/MatchItem.view'
-  render: ->
+```js
+fission.collectionView({
+  model: require('models/Match'),
+  itemView: require('pages/Match/MatchItem/MatchItem.view'),
 
-    if @items.length is 0
-      @items = span null, 'No Matches right now!'
-    return @items
+  render: function() {
+    if (this.items.length === 0) {
+      this.items = span(null, 'No Matches right now!');
+    }
+    return this.items;
+  }
+});
 ```     
      
 #### Model View
 
 model view
 
-```coffeescript
-fission.modelView
-  model: require 'models/Match'
-  notify: ['Date']
-  dislike: -> @model.destroy()
-  like: ->
-    @model.save {userApproved: true}, patch: true
-    @model.destroy()
+```js
+fission.modelView({
+  model: require('models/Match'),
+  notify: ['Date'],
 
-  render: ->
-    user = @model.get('match')
-    # ...
+  dislike: function() {
+    return this.model.destroy();
+  },
+  like: function() {
+    this.model.save({userApproved: true}, {patch: true});
+    return this.model.destroy();
+  },
+  render: function() {
+    var user = this.model.get('match');
+    return user;
+  }
+});
 ```
 
 #### Model 
 
 model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
 
-```coffeescript  
-fission.model
-  idAttribute: '_id'
-  name: 'Match'
-  url:  '/v1/matches'
-  initialize: ->
-    @set 'match', new User @get 'match'
+```js
+fission.model({
+  idAttribute: '_id',
+  name: 'Match',
+  url: '/v1/matches',
+
+  initialize: function() {
+    var user = new User(this.get('match'));
+    return this.set('match', user);
+  }
+});
+
 ```
