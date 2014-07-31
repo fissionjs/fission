@@ -13,7 +13,9 @@ module.exports = (config) ->
             model: m
             key: m.id
       @forceUpdate()
+
     componentWillMount: ->
+      @items ?= []
       unless @collection?
         ctor = createCollection config.model
         @collection = new ctor
