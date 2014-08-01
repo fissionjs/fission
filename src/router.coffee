@@ -39,8 +39,6 @@ app.createRenderHandler = (opt={}) ->
   return handler
 
 app.route = (route, handlers...) ->
-  #console.log route
-  #console.log handlers
   handlers = handlers.map app.createRouteHandler
   page route, handlers...
   return app
