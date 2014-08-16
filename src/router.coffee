@@ -1,4 +1,5 @@
 page = require 'page'
+React = require 'react'
 
 app = {}
 
