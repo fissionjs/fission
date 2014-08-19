@@ -1,0 +1,29 @@
+<html>
+<head>
+<title>simple example</title>
+</head>
+<body>
+<h1>hi</h1>
+<div id = "content"></div>
+</body>
+<script type="text/javascript" src = "./fission.js"></script>
+<script type="text/javascript">
+console.log(fission);
+
+var view = function(){return "<h3>yo</h3>"};
+
+fission.router.route('/foo', {
+  title: 'home',
+  view: view,
+  el: 'content',
+  continue: false
+});
+
+fission.router.start({
+  click: true,
+  dispatch: true,
+  popstate: true
+});  
+
+</script>
+</html>

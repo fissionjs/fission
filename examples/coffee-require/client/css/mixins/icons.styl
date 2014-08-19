@@ -1,0 +1,22 @@
+@require 'nib'
+@require './colors'
+
+impact-icon()
+  &:before
+    font-family: pileup;
+    content: "\e601";
+    font-size: .7em
+    letter-spacing: .2em
+    color: teal
+
+impact-icon-inverted()
+  impact-icon()
+  &:before
+    color: bgColor
+
+location-icon()
+  &:before
+    font-family: pileup;
+    content: "\e602";
+    font-size: .9em
+    letter-spacing: .2em

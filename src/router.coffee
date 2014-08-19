@@ -1,17 +1,12 @@
 page = require 'page'
+React = require 'react'
 
 app = {}
-
 renderView = (opt={}, cb) ->
   if typeof opt.view is 'function'
     opt.view = opt.view opt.args
     return renderView opt, cb
-  else if typeof opt.view is 'string'
-    return require [opt.view], (vu) ->
-      opt.view = vu
-      renderView opt, cb
-  else
-    #console.log 'rendering', opt.view, 'into', opt.el
+  else    
     React.renderComponent opt.view, opt.el
     return cb()
 

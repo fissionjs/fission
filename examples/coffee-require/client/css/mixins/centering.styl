@@ -1,0 +1,22 @@
+@require 'nib'
+
+vertical-center()
+  margin: auto
+  position: absolute
+  top: 0
+  left: 0
+  bottom: 0
+  right: 0
+
+horizontal-center()
+  margin: 0 auto
+
+absolute-horizontal-center(width)
+  position: absolute
+  left: 50%
+  margin-left: -(width/2)
+
+absolute-vertical-center(height)
+  position: absolute
+  top: 50%
+  margin-top: -(height/2)

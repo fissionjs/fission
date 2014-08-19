@@ -17,3 +17,5 @@ module.exports =
 
   mixins:
     Listener: require './ListenerMixin'
+
+  React: require 'react'
