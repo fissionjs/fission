@@ -1,6 +1,7 @@
 modelView = require '../src/modelView'
 model = require '../src/model'
 domino = require 'domino'
+should = require 'should'
 
 React = null
 utils = null
@@ -10,11 +11,11 @@ global.document = window.document
 global.navigator = window.navigator
 
 
-module.exports =
+describe "#modelView", ->
 
-  "#modelView should produce a React view": =>
+  it "should produce a React view", (done) =>
 
-    m = model 
+    m = model
       url: '/v1/foo'
       name: 'foo'
       fetch: ->
@@ -28,7 +29,7 @@ module.exports =
     @v.should.have.property 'componentConstructor'
     @v.should.have.property 'originalSpec'
 
-  "#modelView should ...": =>
+  it "should render", =>
     React = require 'react/addons'
     utils = React.addons.TestUtils
     #console.log document
