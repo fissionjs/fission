@@ -25285,6 +25285,7 @@ exports.formatProp = function(name) {
 },{"../src/createCollection":165,"../src/model":170,"backbone":1}],176:[function(require,module,exports){
 (function() {
   ({
+    fission: require('./'),
     view: require('./view'),
     modelView: require('./modelView'),
     createCollection: require('./createCollection'),
@@ -25294,7 +25295,32 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./alias":174,"./createCollection":175,"./model":177,"./modelView":178,"./view":179}],177:[function(require,module,exports){
+},{"./":177,"./alias":174,"./createCollection":175,"./model":178,"./modelView":179,"./view":180}],177:[function(require,module,exports){
+(function() {
+  var fission, should;
+
+  fission = require('../src/index');
+
+  should = require('should');
+
+  describe("fission", function() {
+    return it("should have expected api", function(done) {
+      fission.should.have.property('router');
+      fission.should.have.property('middleware');
+      fission.should.have.property('mixins');
+      fission.should.have.property('view');
+      fission.should.have.property('modelView');
+      fission.should.have.property('collectionView');
+      fission.should.have.property('alias');
+      fission.should.have.property('createCollection');
+      fission.should.have.property('model');
+      return done();
+    });
+  });
+
+}).call(this);
+
+},{"../src/index":166,"should":160}],178:[function(require,module,exports){
 (function() {
   var Backbone, model, should;
 
@@ -25322,7 +25348,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src":166,"backbone":1,"should":160}],178:[function(require,module,exports){
+},{"../src":166,"backbone":1,"should":160}],179:[function(require,module,exports){
 (function() {
   var React, model, modelView, should, utils;
 
@@ -25362,7 +25388,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src/model":170,"../src/modelView":171,"should":160}],179:[function(require,module,exports){
+},{"../src/model":170,"../src/modelView":171,"should":160}],180:[function(require,module,exports){
 (function() {
   var should, view;
 

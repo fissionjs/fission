@@ -1,3 +1,4 @@
+fission: require './'
 view: require './view'
 modelView: require './modelView'
 createCollection: require './createCollection'
