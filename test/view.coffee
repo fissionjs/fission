@@ -1,15 +1,17 @@
-view = require '../src/view'
+{view} = require '../src'
+should = require 'should'
 
-module.exports = 
+describe "#view", ->
 
-  "View should produce the right output": ->
+  it "should produce the right output", (done) ->
 
-    v = view 
-      init: -> 
-      mounting: -> 
+    v = view
+      init: ->
+      mounting: ->
       mounted: ->
       unmounting: ->
       render: ->
 
     v.should.be.instanceof Function
     v.should.have.property 'originalSpec'
+    done()

@@ -6,23 +6,27 @@ gif        = require 'gulp-if'
 lr         = require 'gulp-livereload'
 coffeeify  = require 'gulp-coffeeify'
 autowatch  = require 'gulp-autowatch'
+open       = require 'gulp-open'
+concat     = require 'gulp-concat'
 
 mocha = require 'gulp-mocha'
 
 paths =
   coffee: 'src/**/*.coffee'
   coffeeSrc: 'src/index.coffee'
-  test: 'test/**/*.coffee'
+  test: 'test/main.coffee'
 
 gulp.task 'watch', ->
   autowatch gulp, paths
 
-
 gulp.task 'test', ->
-  #gulp.src(paths.test)
-  #  .pipe mocha
-  #    reporter: 'spec'
-  #    ui: 'exports'
+  gulp.src paths.test
+    .pipe coffeeify()
+    .pipe concat 'main.js'
+    .pipe gulp.dest 'test/browser'
+    .on 'end', ->
+      gulp.src './test/browser/index.html'
+        .pipe open()
 
 gulp.task 'coffee', ->
   gulp.src paths.coffeeSrc

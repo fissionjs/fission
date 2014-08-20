@@ -2,9 +2,9 @@ createCollection = require '../src/createCollection'
 model = require '../src/model'
 Backbone = require 'backbone'
 
-module.exports = 
+describe "#createCollection", ->
 
-  "#createCollection": ->
+  it "should return a collection", (done) ->
 
     m = model
       urlRoot: '/v1/foo'
@@ -14,3 +14,4 @@ module.exports =
     inst = new col
 
     inst.should.be.instanceOf Backbone.Collection
+    done()

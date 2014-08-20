@@ -1,8 +1,8 @@
 aliasLifecycle = require '../src/alias'
 
-module.exports = 
+describe "#Fission.alias", ->
 
-  "given a view, alias should alias correctly": ->
+  it "should alias correctly", (done) ->
 
     view =
       init: ->
@@ -17,3 +17,4 @@ module.exports =
     config.should.have.property 'componentDidMount'
     config.should.have.property 'componentWillUnmount'
     config.should.have.property 'mixins'
+    done()
