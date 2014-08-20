@@ -25341,7 +25341,6 @@ exports.formatProp = function(name) {
       inst.should.be.instanceOf(Backbone.Model);
       m.prototype.getType().should.equal('model');
       m.modelType.should.equal('foo');
-      console.log(this);
       return done();
     });
   });

@@ -36,7 +36,7 @@
     "should": "^4.0.4"
   },
   "scripts": {
-    "test": "NODE_ENV=testing mocha --require should test/*.coffee --reporter spec --ui exports --compilers coffee:coffee-script/register"
+    "test": "NODE_ENV=testing mocha test/*.coffee --reporter spec --compilers coffee:coffee-script/register"
   },
   "engines": {
     "node": ">= 0.10"
