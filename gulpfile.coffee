@@ -31,6 +31,7 @@ gulp.task 'coffee', ->
     .pipe sourcemaps.write()
     .pipe rename 'fission.js'
     .pipe gulp.dest 'examples/coffee-require/client/vendor'
+    .pipe gulp.dest 'examples/coffee-browserify/client/vendor'
     .pipe gulp.dest 'dist'
     .pipe uglify()
     .pipe rename 'fission.min.js'
