@@ -14,5 +14,4 @@ describe "#model should produce a model", ->
     inst.should.be.instanceOf Backbone.Model
     m.prototype.getType().should.equal 'model'
     m.modelType.should.equal 'foo'
-    console.log @
     done()
