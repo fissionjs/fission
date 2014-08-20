@@ -21,10 +21,12 @@
     "gulp": "^3.8.6",
     "gulp-autowatch": "0.0.1",
     "gulp-coffeeify": "^0.1.2",
+    "gulp-concat": "^2.3.4",
     "gulp-if": "^1.2.4",
     "gulp-jshint": "^1.7.1",
     "gulp-livereload": "^2.1.0",
     "gulp-mocha": "^0.5.2",
+    "gulp-open": "^0.2.8",
     "gulp-rename": "^1.2.0",
     "gulp-sourcemaps": "^1.1.0",
     "gulp-uglify": "^0.3.1",
@@ -34,7 +36,7 @@
     "should": "^4.0.4"
   },
   "scripts": {
-    "test": "NODE_ENV=testing mocha --require should --recursive --reporter spec --ui exports --compilers coffee:coffee-script/register"
+    "test": "NODE_ENV=testing mocha --require should test/*.coffee --reporter spec --ui exports --compilers coffee:coffee-script/register"
   },
   "engines": {
     "node": ">= 0.10"

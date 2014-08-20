@@ -1,7 +1,7 @@
 {view} = require '../src'
 should = require 'should'
 
-describe "View", ->
+describe "#view", ->
 
   it "should produce the right output", (done) ->
 
