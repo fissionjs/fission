@@ -6,7 +6,7 @@ define (require) ->
   console.log "start"
   console.log Fission
 
-  fission = Fission
-    routes: routes
+  #fission = Fission
+  #  routes: routes
 
-  fission.start()
+  #fission.start()
