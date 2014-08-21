@@ -38,7 +38,7 @@
     "should": "^4.0.4"
   },
   "scripts": {
-    "test": "NODE_ENV=testing mocha-phantomjs ./test/browser/index.html"
+    "test": "gulp test && NODE_ENV=testing mocha-phantomjs ./test/browser/index.html"
   },
   "engines": {
     "node": ">= 0.10"

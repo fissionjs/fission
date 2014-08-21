@@ -24,9 +24,10 @@ gulp.task 'test', ->
     .pipe coffeeify()
     .pipe concat 'main.js'
     .pipe gulp.dest 'test/browser'
-    .on 'end', ->
-      gulp.src './test/browser/index.html'
-        .pipe open()
+
+gulp.task 'test:browser', ['test'], ->
+  gulp.src './test/browser/index.html'
+    .pipe open()
 
 gulp.task 'coffee', ->
   gulp.src paths.coffeeSrc
