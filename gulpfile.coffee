@@ -23,15 +23,15 @@ gulp.task 'watch', ->
 
 gulp.task 'test', ->
   bCache = {}
-  b = browserify "./test/main.coffee",
-    standalone: "fission"
+  b = browserify './test/main.coffee',
+    standalone: 'fission'
     debug: true
     insertGlobals: true
     cache: bCache
     extensions: ['.coffee']
   b.transform coffeeify
   b.bundle()
-  .pipe source "main.js"
+  .pipe source 'main.js'
   .pipe buffer()
   .pipe sourcemaps.init()
   .pipe sourcemaps.write()
@@ -45,14 +45,14 @@ gulp.task 'test:browser', ['test'], ->
 gulp.task 'coffee', ->
   bCache = {}
   b = browserify paths.coffeeSrc,
-    standalone: "fission"
+    standalone: 'fission'
     debug: true
     insertGlobals: true
     cache: bCache
     extensions: ['.coffee']
   b.transform coffeeify
   b.bundle()
-  .pipe source "fission.js"
+  .pipe source 'fission.js'
   .pipe buffer()
   .pipe gulp.dest 'dist'
   .pipe uglify()
