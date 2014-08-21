@@ -33,10 +33,12 @@
     "jshint": "^2.4.1",
     "jshint-stylish": "^0.2.0",
     "mocha": "^1.20.1",
+    "mocha-phantomjs": "^3.5.0",
+    "phantomjs": "^1.9.7-15",
     "should": "^4.0.4"
   },
   "scripts": {
-    "test": "NODE_ENV=testing mocha test/*.coffee --reporter spec --compilers coffee:coffee-script/register"
+    "test": "NODE_ENV=testing mocha-phantomjs ./test/browser/index.html"
   },
   "engines": {
     "node": ">= 0.10"
