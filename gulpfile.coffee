@@ -36,6 +36,7 @@ gulp.task 'test', ->
   .pipe sourcemaps.init()
   .pipe sourcemaps.write()
   .pipe gulp.dest 'test/browser'
+  .close()
 
 gulp.task 'test:browser', ['test'], ->
   gulp.src './test/browser/index.html'
@@ -61,5 +62,6 @@ gulp.task 'coffee', ->
   .pipe uglify()
   .pipe rename 'fission.min.js'
   .pipe gulp.dest 'dist'
+  .close()
 
 gulp.task 'default', ['coffee', 'test', 'watch']
