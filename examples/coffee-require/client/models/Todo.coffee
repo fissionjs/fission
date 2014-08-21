@@ -1,8 +1,8 @@
 define (require) ->
 
   fission = require 'vendor/fission'
- 
+  console.log fission
   fission.model
-    name: 'Todo'
-    url: '/v1/todo'
+    props:
+      text: 'string'
  

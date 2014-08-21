@@ -6,7 +6,9 @@ module.exports = (model) ->
   #model.urlRoot = model.url
   #delete model.url
   
-  m = Model.extend model #,
+  m = Model.extend model 
+
+  #,
   #  modelType: model.name
   #m.prototype.getType = -> "model"
   

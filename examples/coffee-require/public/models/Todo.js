@@ -2,9 +2,11 @@
   define(function(require) {
     var fission;
     fission = require('vendor/fission');
+    console.log(fission);
     return fission.model({
-      name: 'Todo',
-      url: '/v1/todo'
+      props: {
+        text: 'string'
+      }
     });
   });
 

@@ -1,11 +1,12 @@
 define (require) ->
   
-  Fission = require 'fission'
-  localstorage = require 'fission-localstorage'
+  Fission = require 'vendor/fission'
   routes = require './routes'
 
+  console.log "start"
+  console.log Fission
+
   fission = Fission
-    sync: localstorage
     routes: routes
 
   fission.start()

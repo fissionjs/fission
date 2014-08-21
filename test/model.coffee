@@ -3,6 +3,7 @@ should = require 'should'
 
 describe "#model should produce a model", ->
   it " should produce a model", (done) ->
+
     m = model
       props:
         firstName: 'string'

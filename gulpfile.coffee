@@ -3,7 +3,6 @@ uglify     = require 'gulp-uglify'
 rename     = require 'gulp-rename'
 sourcemaps = require 'gulp-sourcemaps'
 gif        = require 'gulp-if'
-lr         = require 'gulp-livereload'
 coffeeify  = require 'gulp-coffeeify'
 autowatch  = require 'gulp-autowatch'
 open       = require 'gulp-open'
@@ -41,6 +40,5 @@ gulp.task 'coffee', ->
     .pipe uglify()
     .pipe rename 'fission.min.js'
     .pipe gulp.dest 'dist'
-    .pipe lr()
 
 gulp.task 'default', ['coffee', 'test', 'watch']

@@ -1,2025 +1,70 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var State = require('ampersand-state');
 var _ = require('underscore');
-var sync = require('ampersand-sync');
+var slice = [].slice;
+var mixins = {};
 
 
-var Model = State.extend({
-    save: function (key, val, options) {
-        var attrs, method, xhr, attributes = this.attributes;
+// Underscore methods that we want to implement on the Collection.
+var methods = ['forEach', 'each', 'map', 'collect', 'reduce', 'foldl',
+    'inject', 'reduceRight', 'foldr', 'find', 'detect', 'filter', 'select',
+    'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
+    'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
+    'tail', 'drop', 'last', 'without', 'difference', 'indexOf', 'shuffle',
+    'lastIndexOf', 'isEmpty', 'chain', 'sample', 'partition'
+];
 
-        // Handle both `"key", value` and `{key: value}` -style arguments.
-        if (key == null || typeof key === 'object') {
-            attrs = key;
-            options = val;
-        } else {
-            (attrs = {})[key] = val;
-        }
-
-        options = _.extend({validate: true}, options);
-
-        // If we're not waiting and attributes exist, save acts as
-        // `set(attr).save(null, opts)` with validation. Otherwise, check if
-        // the model will be valid when the attributes, if any, are set.
-        if (attrs && !options.wait) {
-            if (!this.set(attrs, options)) return false;
-        } else {
-            if (!this._validate(attrs, options)) return false;
-        }
-
-        // After a successful server-side save, the client is (optionally)
-        // updated with the server-side state.
-        if (options.parse === void 0) options.parse = true;
-        var model = this;
-        var success = options.success;
-        options.success = function (resp) {
-            var serverAttrs = model.parse(resp, options);
-            if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
-            if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
-                return false;
-            }
-            if (success) success(model, resp, options);
-            model.trigger('sync', model, resp, options);
-        };
-        wrapError(this, options);
-
-        method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
-        if (method === 'patch') options.attrs = attrs;
-        // if we're waiting we haven't actually set our attributes yet so
-        // we need to do make sure we send right data
-        if (options.wait) options.attrs = _.extend(model.serialize(), attrs);
-        xhr = this.sync(method, this, options);
-
-        return xhr;
-    },
-
-    // Fetch the model from the server. If the server's representation of the
-    // model differs from its current attributes, they will be overridden,
-    // triggering a `"change"` event.
-    fetch: function (options) {
-        options = options ? _.clone(options) : {};
-        if (options.parse === void 0) options.parse = true;
-        var model = this;
-        var success = options.success;
-        options.success = function (resp) {
-            if (!model.set(model.parse(resp, options), options)) return false;
-            if (success) success(model, resp, options);
-            model.trigger('sync', model, resp, options);
-        };
-        wrapError(this, options);
-        return this.sync('read', this, options);
-    },
-
-    // Destroy this model on the server if it was already persisted.
-    // Optimistically removes the model from its collection, if it has one.
-    // If `wait: true` is passed, waits for the server to respond before removal.
-    destroy: function (options) {
-        options = options ? _.clone(options) : {};
-        var model = this;
-        var success = options.success;
-
-        var destroy = function () {
-            model.trigger('destroy', model, model.collection, options);
-        };
-
-        options.success = function (resp) {
-            if (options.wait || model.isNew()) destroy();
-            if (success) success(model, resp, options);
-            if (!model.isNew()) model.trigger('sync', model, resp, options);
-        };
-
-        if (this.isNew()) {
-            options.success();
-            return false;
-        }
-        wrapError(this, options);
-
-        var xhr = this.sync('delete', this, options);
-        if (!options.wait) destroy();
-        return xhr;
-    },
-
-    // Proxy `ampersand-sync` by default -- but override this if you need
-    // custom syncing semantics for *this* particular model.
-    sync: function () {
-        return sync.apply(this, arguments);
-    },
-
-    // Default URL for the model's representation on the server -- if you're
-    // using Backbone's restful methods, override this to change the endpoint
-    // that will be called.
-    url: function () {
-        var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
-        if (this.isNew()) return base;
-        return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
-    }
+// Mix in each Underscore method as a proxy to `Collection#models`.
+_.each(methods, function (method) {
+    if (!_[method]) return;
+    mixins[method] = function () {
+        var args = slice.call(arguments);
+        args.unshift(this.models);
+        return _[method].apply(_, args);
+    };
 });
 
-// Throw an error when a URL is needed, and none is supplied.
-var urlError = function () {
-    throw new Error('A "url" property or function must be specified');
-};
+// Underscore methods that take a property name as an argument.
+var attributeMethods = ['groupBy', 'countBy', 'sortBy', 'indexBy'];
 
-// Wrap an optional error callback with a fallback error event.
-var wrapError = function (model, options) {
-    var error = options.error;
-    options.error = function (resp) {
-        if (error) error(model, resp, options);
-        model.trigger('error', model, resp, options);
+// Use attributes instead of properties.
+_.each(attributeMethods, function (method) {
+    if (!_[method]) return;
+    mixins[method] = function (value, context) {
+        var iterator = _.isFunction(value) ? value : function (model) {
+            return model.get ? model.get(value) : model[value];
+        };
+        return _[method](this.models, iterator, context);
     };
-};
-
-module.exports = Model;
-
-},{"ampersand-state":2,"ampersand-sync":7,"underscore":20}],2:[function(require,module,exports){
-var _ = require('underscore');
-var BBEvents = require('backbone-events-standalone');
-var KeyTree = require('key-tree-store');
-var arrayNext = require('array-next');
-var changeRE = /^change:/;
-
-function Base(attrs, options) {
-    options || (options = {});
-    this.cid || (this.cid = _.uniqueId('state'));
-    this._events = {};
-    this._values = {};
-    this._definition = Object.create(this._definition);
-    if (options.parse) attrs = this.parse(attrs, options);
-    this.parent = options.parent;
-    this.collection = options.collection;
-    this._keyTree = new KeyTree();
-    this._initCollections();
-    this._initChildren();
-    this._cache = {};
-    this._previousAttributes = {};
-    if (attrs) this.set(attrs, _.extend({silent: true, initial: true}, options));
-    this._changed = {};
-    if (this._derived) this._initDerived();
-    if (options.init !== false) this.initialize.apply(this, arguments);
-}
-
-
-_.extend(Base.prototype, BBEvents, {
-    // can be allow, ignore, reject
-    extraProperties: 'ignore',
-
-    idAttribute: 'id',
-
-    namespaceAttribute: 'namespace',
-
-    typeAttribute: 'modelType',
-
-    // Stubbed out to be overwritten
-    initialize: function () {
-        return this;
-    },
-
-    // Get ID of model per configuration.
-    // Should *always* be how ID is determined by other code.
-    getId: function () {
-        return this[this.idAttribute];
-    },
-
-    // Get namespace of model per configuration.
-    // Should *always* be how namespace is determined by other code.
-    getNamespace: function () {
-        return this[this.namespaceAttribute];
-    },
-
-    // Get type of model per configuration.
-    // Should *always* be how type is determined by other code.
-    getType: function () {
-        return this[this.typeAttribute];
-    },
-
-    // A model is new if it has never been saved to the server, and lacks an id.
-    isNew: function () {
-        return this.getId() == null;
-    },
-
-    // get HTML-escaped value of attribute
-    escape: function (attr) {
-        return _.escape(this.get(attr));
-    },
-
-    // Check if the model is currently in a valid state.
-    isValid: function (options) {
-        return this._validate({}, _.extend(options || {}, { validate: true }));
-    },
-
-    // Parse can be used remap/restructure/rename incoming properties
-    // before they are applied to attributes.
-    parse: function (resp, options) {
-        return resp;
-    },
-
-    // Serialize is the inverse of `parse` it lets you massage data
-    // on the way out. Before, sending to server, for example.
-    serialize: function () {
-        var res = this.getAttributes({props: true}, true);
-        _.each(this._children, function (value, key) {
-            res[key] = this[key].serialize();
-        }, this);
-        _.each(this._collections, function (value, key) {
-            res[key] = this[key].serialize();
-        }, this);
-        return res;
-    },
-
-    // Main set method used by generated setters/getters and can
-    // be used directly if you need to pass options or set multiple
-    // properties at once.
-    set: function (key, value, options) {
-        var self = this;
-        var extraProperties = this.extraProperties;
-        var triggers = [];
-        var changing, changes, newType, newVal, def, cast, err, attr,
-            attrs, dataType, silent, unset, currentVal, initial, hasChanged, isEqual;
-
-        // Handle both `"key", value` and `{key: value}` -style arguments.
-        if (_.isObject(key) || key === null) {
-            attrs = key;
-            options = value;
-        } else {
-            attrs = {};
-            attrs[key] = value;
-        }
-
-        options = options || {};
-
-        if (!this._validate(attrs, options)) return false;
-
-        // Extract attributes and options.
-        unset = options.unset;
-        silent = options.silent;
-        initial = options.initial;
-
-        changes = [];
-        changing = this._changing;
-        this._changing = true;
-
-        // if not already changing, store previous
-        if (!changing) {
-            this._previousAttributes = this.attributes;
-            this._changed = {};
-        }
-
-        // For each `set` attribute...
-        for (attr in attrs) {
-            newVal = attrs[attr];
-            newType = typeof newVal;
-            currentVal = this._values[attr];
-            def = this._definition[attr];
-
-
-            if (!def) {
-                // if this is a child model or collection
-                if (this._children[attr] || this._collections[attr]) {
-                    this[attr].set(newVal, options);
-                    continue;
-                } else if (extraProperties === 'ignore') {
-                    continue;
-                } else if (extraProperties === 'reject') {
-                    throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and extraProperties not set to "ignore" or "allow"');
-                } else if (extraProperties === 'allow') {
-                    def = this._createPropertyDefinition(attr, 'any');
-                }
-            }
-
-            isEqual = this._getCompareForType(def.type);
-            dataType = this._dataTypes[def.type];
-
-            // check type if we have one
-            if (dataType && dataType.set) {
-                cast = dataType.set(newVal);
-                newVal = cast.val;
-                newType = cast.type;
-            }
-
-            // If we've defined a test, run it
-            if (def.test) {
-                err = def.test.call(this, newVal, newType);
-                if (err) {
-                    throw new TypeError('Property \'' + attr + '\' failed validation with error: ' + err);
-                }
-            }
-
-            // If we are required but undefined, throw error.
-            // If we are null and are not allowing null, throw error
-            // If we have a defined type and the new type doesn't match, and we are not null, throw error.
-
-            if (_.isUndefined(newVal) && def.required) {
-                throw new TypeError('Required property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
-            }
-            if (_.isNull(newVal) && def.required && !def.allowNull) {
-                throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + ' (cannot be null). Tried to set ' + newVal);
-            }
-            if ((def.type && def.type !== 'any' && def.type !== newType) && !_.isNull(newVal) && !_.isUndefined(newVal)) {
-                throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
-            }
-            if (def.values && !_.contains(def.values, newVal)) {
-                throw new TypeError('Property \'' + attr + '\' must be one of values: ' + def.values.join(', '));
-            }
-
-            hasChanged = !isEqual(currentVal, newVal, attr);
-
-            // enforce `setOnce` for properties if set
-            if (def.setOnce && currentVal !== undefined && hasChanged) {
-                throw new TypeError('Property \'' + key + '\' can only be set once.');
-            }
-
-            // keep track of changed attributes
-            // and push to changes array
-            if (hasChanged) {
-                changes.push({prev: currentVal, val: newVal, key: attr});
-                self._changed[attr] = newVal;
-            } else {
-                delete self._changed[attr];
-            }
-        }
-
-        // actually update our values
-        _.each(changes, function (change) {
-            self._previousAttributes[change.key] = change.prev;
-            if (unset) {
-                delete self._values[change.key];
-            } else {
-                self._values[change.key] = change.val;
-            }
-        });
-
-        if (!silent && changes.length) self._pending = true;
-        if (!silent) {
-            _.each(changes, function (change) {
-                self.trigger('change:' + change.key, self, change.val, options);
-            });
-        }
-
-        // You might be wondering why there's a `while` loop here. Changes can
-        // be recursively nested within `"change"` events.
-        if (changing) return this;
-        if (!silent) {
-            while (this._pending) {
-                this._pending = false;
-                this.trigger('change', this, options);
-            }
-        }
-        this._pending = false;
-        this._changing = false;
-        return this;
-    },
-
-    get: function (attr) {
-        return this[attr];
-    },
-
-    // Toggle boolean properties or properties that have a `values`
-    // array in its definition.
-    toggle: function (property) {
-        var def = this._definition[property];
-        if (def.type === 'boolean') {
-            // if it's a bool, just flip it
-            this[property] = !this[property];
-        } else if (def && def.values) {
-            // If it's a property with an array of values
-            // skip to the next one looping back if at end.
-            this[property] = arrayNext(def.values, this[property]);
-        } else {
-            throw new TypeError('Can only toggle properties that are type `boolean` or have `values` array.');
-        }
-        return this;
-    },
-
-    // Get all of the attributes of the model at the time of the previous
-    // `"change"` event.
-    previousAttributes: function () {
-        return _.clone(this._previousAttributes);
-    },
-
-    // Determine if the model has changed since the last `"change"` event.
-    // If you specify an attribute name, determine if that attribute has changed.
-    hasChanged: function (attr) {
-        if (attr == null) return !_.isEmpty(this._changed);
-        return _.has(this._changed, attr);
-    },
-
-    // Return an object containing all the attributes that have changed, or
-    // false if there are no changed attributes. Useful for determining what
-    // parts of a view need to be updated and/or what attributes need to be
-    // persisted to the server. Unset attributes will be set to undefined.
-    // You can also pass an attributes object to diff against the model,
-    // determining if there *would be* a change.
-    changedAttributes: function (diff) {
-        if (!diff) return this.hasChanged() ? _.clone(this._changed) : false;
-        var val, changed = false;
-        var old = this._changing ? this._previousAttributes : this.attributes;
-        var def, isEqual;
-        for (var attr in diff) {
-            def = this._definition[attr];
-            isEqual = this._getCompareForType(def && def.type);
-            if (isEqual(old[attr], (val = diff[attr]))) continue;
-            (changed || (changed = {}))[attr] = val;
-        }
-        return changed;
-    },
-
-    toJSON: function () {
-        return this.serialize();
-    },
-
-    unset: function (attr, options) {
-        var def = this._definition[attr];
-        var type = def.type;
-        var val;
-        if (def.required) {
-            val = _.result(def, 'default');
-            return this.set(attr, val, options);
-        } else {
-            return this.set(attr, val, _.extend({}, options, {unset: true}));
-        }
-    },
-
-    clear: function (options) {
-        var self = this;
-        _.each(_.keys(this.attributes), function (key) {
-            self.unset(key, options);
-        });
-        return this;
-    },
-
-    previous: function (attr) {
-        if (attr == null || !Object.keys(this._previousAttributes).length) return null;
-        return this._previousAttributes[attr];
-    },
-
-    // Get default values for a certain type
-    _getDefaultForType: function (type) {
-        var dataType = this._dataTypes[type];
-        return dataType && dataType.default;
-    },
-
-    // Determine which comparison algorithm to use for comparing a property
-    _getCompareForType: function (type) {
-        var dataType = this._dataTypes[type];
-        if (dataType && dataType.compare) return _.bind(dataType.compare, this);
-        return _.isEqual;
-    },
-
-    // Run validation against the next complete set of model attributes,
-    // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
-    _validate: function (attrs, options) {
-        if (!options.validate || !this.validate) return true;
-        attrs = _.extend({}, this.attributes, attrs);
-        var error = this.validationError = this.validate(attrs, options) || null;
-        if (!error) return true;
-        this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
-        return false;
-    },
-
-    _createPropertyDefinition: function (name, desc, isSession) {
-        return createPropertyDefinition(this, name, desc, isSession);
-    },
-
-    // just makes friendlier errors when trying to define a new model
-    // only used when setting up original property definitions
-    _ensureValidType: function (type) {
-        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'].concat(_.keys(this._dataTypes)), type) ? type : undefined;
-    },
-
-    getAttributes: function (options, raw) {
-        options || (options = {});
-        _.defaults(options, {
-            session: false,
-            props: false,
-            derived: false
-        });
-        var res = {};
-        var val, item, def;
-        for (item in this._definition) {
-            def = this._definition[item];
-            if ((options.session && def.session) || (options.props && !def.session)) {
-                val = (raw) ? this._values[item] : this[item];
-                if (typeof val === 'undefined') val = _.result(def, 'default');
-                if (typeof val !== 'undefined') res[item] = val;
-            }
-        }
-        if (options.derived) {
-            for (item in this._derived) res[item] = this[item];
-        }
-        return res;
-    },
-
-    _initDerived: function () {
-        var self = this;
-
-        _.each(this._derived, function (value, name) {
-            var def = self._derived[name];
-            def.deps = def.depList;
-
-            var update = function (options) {
-                options = options || {};
-
-                var newVal = def.fn.call(self);
-
-                if (self._cache[name] !== newVal || !def.cache) {
-                    if (def.cache) {
-                        self._previousAttributes[name] = self._cache[name];
-                    }
-                    self._cache[name] = newVal;
-                    self.trigger('change:' + name, self, self._cache[name]);
-                }
-            };
-
-            def.deps.forEach(function (propString) {
-                self._keyTree.add(propString, update);
-            });
-        });
-
-        this.on('all', function (eventName) {
-            if (changeRE.test(eventName)) {
-                self._keyTree.get(eventName.split(':')[1]).forEach(function (fn) {
-                    fn();
-                });
-            }
-        }, this);
-    },
-
-    _getDerivedProperty: function (name, flushCache) {
-        // is this a derived property that is cached
-        if (this._derived[name].cache) {
-            //set if this is the first time, or flushCache is set
-            if (flushCache || !this._cache.hasOwnProperty(name)) {
-                this._cache[name] = this._derived[name].fn.apply(this);
-            }
-            return this._cache[name];
-        } else {
-            return this._derived[name].fn.apply(this);
-        }
-    },
-
-    _initCollections: function () {
-        var coll;
-        if (!this._collections) return;
-        for (coll in this._collections) {
-            this[coll] = new this._collections[coll]([], {parent: this});
-        }
-    },
-
-    _initChildren: function () {
-        var child;
-        if (!this._children) return;
-        for (child in this._children) {
-            this[child] = new this._children[child]({}, {parent: this});
-            this.listenTo(this[child], 'all', this._getEventBubblingHandler(child));
-        }
-    },
-
-    // Returns a bound handler for doing event bubbling while
-    // adding a name to the change string.
-    _getEventBubblingHandler: function (propertyName) {
-        return _.bind(function (name, model, newValue) {
-            if (changeRE.test(name)) {
-                this.trigger('change:' + propertyName + '.' + name.split(':')[1], model, newValue);
-            } else if (name === 'change') {
-                this.trigger('change', this);
-            }
-        }, this);
-    },
-
-    // Check that all required attributes are present
-    _verifyRequired: function () {
-        var attrs = this.attributes; // should include session
-        for (var def in this._definition) {
-            if (this._definition[def].required && typeof attrs[def] === 'undefined') {
-                return false;
-            }
+});
+
+// Return models with matching attributes. Useful for simple cases of
+// `filter`.
+mixins.where = function (attrs, first) {
+    if (_.isEmpty(attrs)) return first ? void 0 : [];
+    return this[first ? 'find' : 'filter'](function (model) {
+        var value;
+        for (var key in attrs) {
+            value = model.get ? model.get(key) : model[key];
+            if (attrs[key] !== value) return false;
         }
         return true;
-    }
-});
-
-// getter for attributes
-Object.defineProperties(Base.prototype, {
-    attributes: {
-        get: function () {
-            return this.getAttributes({props: true, session: true});
-        }
-    },
-    all: {
-        get: function () {
-            return this.getAttributes({
-                session: true,
-                props: true,
-                derived: true
-            });
-        }
-    },
-    isState: {
-        get: function () { return true; },
-        set: function () { }
-    }
-});
-
-// helper for creating/storing property definitions and creating
-// appropriate getters/setters
-function createPropertyDefinition(object, name, desc, isSession) {
-    var def = object._definition[name] = {};
-    var type, descArray;
-
-    if (_.isString(desc)) {
-        // grab our type if all we've got is a string
-        type = object._ensureValidType(desc);
-        if (type) def.type = type;
-    } else {
-
-        //Transform array of ['type', required, default] to object form
-        if (_.isArray(desc)) {
-            descArray = desc;
-            desc = {
-                type: descArray[0],
-                required: descArray[1],
-                default: descArray[2]
-            };
-        }
-
-        type = object._ensureValidType(desc.type);
-        if (type) def.type = type;
-
-        if (desc.required) def.required = true;
-
-        if (desc.default && typeof desc.default === 'object') {
-            throw new TypeError('The default value for ' + name + ' cannot be an object/array, must be a value or a function which returns a value/object/array');
-        }
-        def.default = desc.default;
-
-        def.allowNull = desc.allowNull ? desc.allowNull : false;
-        if (desc.setOnce) def.setOnce = true;
-        if (def.required && _.isUndefined(def.default)) def.default = object._getDefaultForType(type);
-        def.test = desc.test;
-        def.values = desc.values;
-    }
-    if (isSession) def.session = true;
-
-    // define a getter/setter on the prototype
-    // but they get/set on the instance
-    Object.defineProperty(object, name, {
-        set: function (val) {
-            this.set(name, val);
-        },
-        get: function () {
-            var result = this._values[name];
-            var typeDef = this._dataTypes[def.type];
-            if (typeof result !== 'undefined') {
-                if (typeDef && typeDef.get) {
-                    result = typeDef.get(result);
-                }
-                return result;
-            }
-            return _.result(def, 'default');
-        }
     });
-
-    return def;
-}
-
-// helper for creating derived property definitions
-function createDerivedProperty(modelProto, name, definition) {
-    var def = modelProto._derived[name] = {
-        fn: _.isFunction(definition) ? definition : definition.fn,
-        cache: (definition.cache !== false),
-        depList: definition.deps || []
-    };
-
-    // add to our shared dependency list
-    _.each(def.depList, function (dep) {
-        modelProto._deps[dep] = _(modelProto._deps[dep] || []).union([name]);
-    });
-
-    // defined a top-level getter for derived names
-    Object.defineProperty(modelProto, name, {
-        get: function () {
-            return this._getDerivedProperty(name);
-        },
-        set: function () {
-            throw new TypeError('"' + name + '" is a derived property, it can\'t be set directly.');
-        }
-    });
-}
-
-var dataTypes = {
-    string: {
-        default: function () {
-            return '';
-        }
-    },
-    date: {
-        set: function (newVal) {
-            var newType;
-            if (!_.isDate(newVal)) {
-                try {
-                    newVal = new Date(parseInt(newVal, 10));
-                    if (!_.isDate(newVal)) throw TypeError;
-                    newVal = newVal.valueOf();
-                    if (_.isNaN(newVal)) throw TypeError;
-                    newType = 'date';
-                } catch (e) {
-                    newType = typeof newVal;
-                }
-            } else {
-                newType = 'date';
-                newVal = newVal.valueOf();
-            }
-            return {
-                val: newVal,
-                type: newType
-            };
-        },
-        get: function (val) {
-            return new Date(val);
-        },
-        default: function () {
-            return new Date();
-        }
-    },
-    array: {
-        set: function (newVal) {
-            return {
-                val: newVal,
-                type: _.isArray(newVal) ? 'array' : typeof newVal
-            };
-        },
-        default: function () {
-            return [];
-        }
-    },
-    object: {
-        set: function (newVal) {
-            var newType = typeof newVal;
-            // we have to have a way of supporting "missing" objects.
-            // Null is an object, but setting a value to undefined
-            // should work too, IMO. We just override it, in that case.
-            if (newType !== 'object' && _.isUndefined(newVal)) {
-                newVal = null;
-                newType = 'object';
-            }
-            return {
-                val: newVal,
-                type: newType
-            };
-        },
-        default: function () {
-            return {};
-        }
-    },
-    // the `state` data type is a bit special in that setting it should
-    // also bubble events
-    state: {
-        set: function (newVal) {
-            var isInstance = newVal instanceof Base || (newVal && newVal.isState);
-            if (isInstance) {
-                return {
-                    val: newVal,
-                    type: 'state'
-                };
-            } else {
-                return {
-                    val: newVal,
-                    type: typeof newVal
-                };
-            }
-        },
-        compare: function (currentVal, newVal, attributeName) {
-            var isSame = currentVal === newVal;
-
-            // if this has changed we want to also handle
-            // event propagation
-            if (!isSame) {
-                this.stopListening(currentVal);
-                if (newVal != null) {
-                    this.listenTo(newVal, 'all', this._getEventBubblingHandler(attributeName));
-                }
-            }
-
-            return isSame;
-        }
-    }
 };
 
-// the extend method used to extend prototypes, maintain inheritance chains for instanceof
-// and allow for additions to the model definitions.
-function extend(protoProps) {
-    var parent = this;
-    var child;
-    var args = [].slice.call(arguments);
-    var prop, item;
-
-    // The constructor function for the new subclass is either defined by you
-    // (the "constructor" property in your `extend` definition), or defaulted
-    // by us to simply call the parent's constructor.
-    if (protoProps && protoProps.hasOwnProperty('constructor')) {
-        child = protoProps.constructor;
-    } else {
-        child = function () {
-            return parent.apply(this, arguments);
-        };
-    }
-
-    // Add static properties to the constructor function from parent
-    _.extend(child, parent);
-
-    // Set the prototype chain to inherit from `parent`, without calling
-    // `parent`'s constructor function.
-    var Surrogate = function () { this.constructor = child; };
-    Surrogate.prototype = parent.prototype;
-    child.prototype = new Surrogate();
-
-    // set prototype level objects
-    child.prototype._derived =  _.extend({}, parent.prototype._derived);
-    child.prototype._deps = _.extend({}, parent.prototype._deps);
-    child.prototype._definition = _.extend({}, parent.prototype._definition);
-    child.prototype._collections = _.extend({}, parent.prototype._collections);
-    child.prototype._children = _.extend({}, parent.prototype._children);
-    child.prototype._dataTypes = _.extend({}, parent.prototype._dataTypes || dataTypes);
-
-    // Mix in all prototype properties to the subclass if supplied.
-    if (protoProps) {
-        args.forEach(function processArg(def) {
-            if (def.dataTypes) {
-                _.each(def.dataTypes, function (def, name) {
-                    child.prototype._dataTypes[name] = def;
-                });
-                delete def.dataTypes;
-            }
-            if (def.props) {
-                _.each(def.props, function (def, name) {
-                    createPropertyDefinition(child.prototype, name, def);
-                });
-                delete def.props;
-            }
-            if (def.session) {
-                _.each(def.session, function (def, name) {
-                    createPropertyDefinition(child.prototype, name, def, true);
-                });
-                delete def.session;
-            }
-            if (def.derived) {
-                _.each(def.derived, function (def, name) {
-                    createDerivedProperty(child.prototype, name, def);
-                });
-                delete def.derived;
-            }
-            if (def.collections) {
-                _.each(def.collections, function (constructor, name) {
-                    child.prototype._collections[name] = constructor;
-                });
-                delete def.collections;
-            }
-            if (def.children) {
-                _.each(def.children, function (constructor, name) {
-                    child.prototype._children[name] = constructor;
-                });
-                delete def.children;
-            }
-            _.extend(child.prototype, def);
-        });
-    }
-
-    var toString = Object.prototype.toString;
-
-    // Set a convenience property in case the parent's prototype is needed
-    // later.
-    child.__super__ = parent.prototype;
-
-    return child;
-}
-
-Base.extend = extend;
-
-// Our main exports
-module.exports = Base;
-
-},{"array-next":3,"backbone-events-standalone":5,"key-tree-store":6,"underscore":20}],3:[function(require,module,exports){
-module.exports = function arrayNext(array, currentItem) {
-    var len = array.length;
-    var newIndex = array.indexOf(currentItem) + 1;
-    if (newIndex > (len - 1)) newIndex = 0;
-    return array[newIndex];
+// Return the first model with matching attributes. Useful for simple cases
+// of `find`.
+mixins.findWhere = function (attrs) {
+    return this.where(attrs, true);
 };
 
-},{}],4:[function(require,module,exports){
-/**
- * Standalone extraction of Backbone.Events, no external dependency required.
- * Degrades nicely when Backone/underscore are already available in the current
- * global context.
- *
- * Note that docs suggest to use underscore's `_.extend()` method to add Events
- * support to some given object. A `mixin()` method has been added to the Events
- * prototype to avoid using underscore for that sole purpose:
- *
- *     var myEventEmitter = BackboneEvents.mixin({});
- *
- * Or for a function constructor:
- *
- *     function MyConstructor(){}
- *     MyConstructor.prototype.foo = function(){}
- *     BackboneEvents.mixin(MyConstructor.prototype);
- *
- * (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
- * (c) 2013 Nicolas Perriault
- */
-/* global exports:true, define, module */
-(function() {
-  var root = this,
-      breaker = {},
-      nativeForEach = Array.prototype.forEach,
-      hasOwnProperty = Object.prototype.hasOwnProperty,
-      slice = Array.prototype.slice,
-      idCounter = 0;
-
-  // Returns a partial implementation matching the minimal API subset required
-  // by Backbone.Events
-  function miniscore() {
-    return {
-      keys: Object.keys,
-
-      uniqueId: function(prefix) {
-        var id = ++idCounter + '';
-        return prefix ? prefix + id : id;
-      },
-
-      has: function(obj, key) {
-        return hasOwnProperty.call(obj, key);
-      },
-
-      each: function(obj, iterator, context) {
-        if (obj == null) return;
-        if (nativeForEach && obj.forEach === nativeForEach) {
-          obj.forEach(iterator, context);
-        } else if (obj.length === +obj.length) {
-          for (var i = 0, l = obj.length; i < l; i++) {
-            if (iterator.call(context, obj[i], i, obj) === breaker) return;
-          }
-        } else {
-          for (var key in obj) {
-            if (this.has(obj, key)) {
-              if (iterator.call(context, obj[key], key, obj) === breaker) return;
-            }
-          }
-        }
-      },
-
-      once: function(func) {
-        var ran = false, memo;
-        return function() {
-          if (ran) return memo;
-          ran = true;
-          memo = func.apply(this, arguments);
-          func = null;
-          return memo;
-        };
-      }
-    };
-  }
-
-  var _ = miniscore(), Events;
-
-  // Backbone.Events
-  // ---------------
-
-  // A module that can be mixed in to *any object* in order to provide it with
-  // custom events. You may bind with `on` or remove with `off` callback
-  // functions to an event; `trigger`-ing an event fires all callbacks in
-  // succession.
-  //
-  //     var object = {};
-  //     _.extend(object, Backbone.Events);
-  //     object.on('expand', function(){ alert('expanded'); });
-  //     object.trigger('expand');
-  //
-  Events = {
-
-    // Bind an event to a `callback` function. Passing `"all"` will bind
-    // the callback to all events fired.
-    on: function(name, callback, context) {
-      if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this;
-      this._events || (this._events = {});
-      var events = this._events[name] || (this._events[name] = []);
-      events.push({callback: callback, context: context, ctx: context || this});
-      return this;
-    },
-
-    // Bind an event to only be triggered a single time. After the first time
-    // the callback is invoked, it will be removed.
-    once: function(name, callback, context) {
-      if (!eventsApi(this, 'once', name, [callback, context]) || !callback) return this;
-      var self = this;
-      var once = _.once(function() {
-        self.off(name, once);
-        callback.apply(this, arguments);
-      });
-      once._callback = callback;
-      return this.on(name, once, context);
-    },
-
-    // Remove one or many callbacks. If `context` is null, removes all
-    // callbacks with that function. If `callback` is null, removes all
-    // callbacks for the event. If `name` is null, removes all bound
-    // callbacks for all events.
-    off: function(name, callback, context) {
-      var retain, ev, events, names, i, l, j, k;
-      if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
-      if (!name && !callback && !context) {
-        this._events = {};
-        return this;
-      }
-
-      names = name ? [name] : _.keys(this._events);
-      for (i = 0, l = names.length; i < l; i++) {
-        name = names[i];
-        if (events = this._events[name]) {
-          this._events[name] = retain = [];
-          if (callback || context) {
-            for (j = 0, k = events.length; j < k; j++) {
-              ev = events[j];
-              if ((callback && callback !== ev.callback && callback !== ev.callback._callback) ||
-                  (context && context !== ev.context)) {
-                retain.push(ev);
-              }
-            }
-          }
-          if (!retain.length) delete this._events[name];
-        }
-      }
-
-      return this;
-    },
-
-    // Trigger one or many events, firing all bound callbacks. Callbacks are
-    // passed the same arguments as `trigger` is, apart from the event name
-    // (unless you're listening on `"all"`, which will cause your callback to
-    // receive the true name of the event as the first argument).
-    trigger: function(name) {
-      if (!this._events) return this;
-      var args = slice.call(arguments, 1);
-      if (!eventsApi(this, 'trigger', name, args)) return this;
-      var events = this._events[name];
-      var allEvents = this._events.all;
-      if (events) triggerEvents(events, args);
-      if (allEvents) triggerEvents(allEvents, arguments);
-      return this;
-    },
-
-    // Tell this object to stop listening to either specific events ... or
-    // to every object it's currently listening to.
-    stopListening: function(obj, name, callback) {
-      var listeners = this._listeners;
-      if (!listeners) return this;
-      var deleteListener = !name && !callback;
-      if (typeof name === 'object') callback = this;
-      if (obj) (listeners = {})[obj._listenerId] = obj;
-      for (var id in listeners) {
-        listeners[id].off(name, callback, this);
-        if (deleteListener) delete this._listeners[id];
-      }
-      return this;
-    }
-
-  };
-
-  // Regular expression used to split event strings.
-  var eventSplitter = /\s+/;
-
-  // Implement fancy features of the Events API such as multiple event
-  // names `"change blur"` and jQuery-style event maps `{change: action}`
-  // in terms of the existing API.
-  var eventsApi = function(obj, action, name, rest) {
-    if (!name) return true;
-
-    // Handle event maps.
-    if (typeof name === 'object') {
-      for (var key in name) {
-        obj[action].apply(obj, [key, name[key]].concat(rest));
-      }
-      return false;
-    }
-
-    // Handle space separated event names.
-    if (eventSplitter.test(name)) {
-      var names = name.split(eventSplitter);
-      for (var i = 0, l = names.length; i < l; i++) {
-        obj[action].apply(obj, [names[i]].concat(rest));
-      }
-      return false;
-    }
-
-    return true;
-  };
-
-  // A difficult-to-believe, but optimized internal dispatch function for
-  // triggering events. Tries to keep the usual cases speedy (most internal
-  // Backbone events have 3 arguments).
-  var triggerEvents = function(events, args) {
-    var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
-    switch (args.length) {
-      case 0: while (++i < l) (ev = events[i]).callback.call(ev.ctx); return;
-      case 1: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1); return;
-      case 2: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2); return;
-      case 3: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2, a3); return;
-      default: while (++i < l) (ev = events[i]).callback.apply(ev.ctx, args);
-    }
-  };
-
-  var listenMethods = {listenTo: 'on', listenToOnce: 'once'};
-
-  // Inversion-of-control versions of `on` and `once`. Tell *this* object to
-  // listen to an event in another object ... keeping track of what it's
-  // listening to.
-  _.each(listenMethods, function(implementation, method) {
-    Events[method] = function(obj, name, callback) {
-      var listeners = this._listeners || (this._listeners = {});
-      var id = obj._listenerId || (obj._listenerId = _.uniqueId('l'));
-      listeners[id] = obj;
-      if (typeof name === 'object') callback = this;
-      obj[implementation](name, callback, this);
-      return this;
-    };
-  });
-
-  // Aliases for backwards compatibility.
-  Events.bind   = Events.on;
-  Events.unbind = Events.off;
-
-  // Mixin utility
-  Events.mixin = function(proto) {
-    var exports = ['on', 'once', 'off', 'trigger', 'stopListening', 'listenTo',
-                   'listenToOnce', 'bind', 'unbind'];
-    _.each(exports, function(name) {
-      proto[name] = this[name];
-    }, this);
-    return proto;
-  };
-
-  // Export Events as BackboneEvents depending on current context
-  if (typeof define === "function") {
-    define(function() {
-      return Events;
-    });
-  } else if (typeof exports !== 'undefined') {
-    if (typeof module !== 'undefined' && module.exports) {
-      exports = module.exports = Events;
-    }
-    exports.BackboneEvents = Events;
-  } else {
-    root.BackboneEvents = Events;
-  }
-})(this);
-
-},{}],5:[function(require,module,exports){
-module.exports = require('./backbone-events-standalone');
-
-},{"./backbone-events-standalone":4}],6:[function(require,module,exports){
-function KeyTreeStore() {
-    this.storage = {};
-}
-
-// add an object to the store
-KeyTreeStore.prototype.add = function (keypath, obj) {
-    var arr = this.storage[keypath] || (this.storage[keypath] = []);
-    arr.push(obj);
+// Plucks an attribute from each model in the collection.
+mixins.pluck = function (attr) {
+    return _.invoke(this.models, 'get', attr);
 };
 
-// remove an object
-KeyTreeStore.prototype.remove = function (obj) {
-    var path, arr;
-    for (path in this.storage) {
-        arr = this.storage[path];
-        arr.some(function (item, index) {
-            if (item === obj) {
-                arr.splice(index, 1);
-                return true;
-            }
-        });
-    }
-};
+module.exports = mixins;
 
-// grab all relevant objects
-KeyTreeStore.prototype.get = function (keypath) {
-    var res = [];
-    var key;
-
-    for (key in this.storage) {
-        if (keypath === key || key.indexOf(keypath + '.') === 0) {
-            res = res.concat(this.storage[key]);
-        }
-    }
-
-    return res;
-};
-
-module.exports = KeyTreeStore;
-
-},{}],7:[function(require,module,exports){
-var _ = require('underscore');
-var xhr = require('xhr');
-var qs = require('qs');
-
-
-// Throw an error when a URL is needed, and none is supplied.
-var urlError = function () {
-    throw new Error('A "url" property or function must be specified');
-};
-
-
-module.exports = function (method, model, options) {
-    var type = methodMap[method];
-    var headers = {};
-
-    // Default options, unless specified.
-    _.defaults(options || (options = {}), {
-        emulateHTTP: false,
-        emulateJSON: false
-    });
-
-    // Default request options.
-    var params = {type: type};
-
-    // Ensure that we have a URL.
-    if (!options.url) {
-        params.url = _.result(model, 'url') || urlError();
-    }
-
-    // Ensure that we have the appropriate request data.
-    if (options.data == null && model && (method === 'create' || method === 'update' || method === 'patch')) {
-        params.json = options.attrs || model.toJSON(options);
-    }
-
-    // If passed a data param, we add it to the URL or body depending on request type
-    if (options.data && type === 'GET') {
-        // make sure we've got a '?'
-        params.url += _.contains(params.url, '?') ? '&' : '?';
-        params.url += qs.stringify(options.data);
-    }
-
-    // For older servers, emulate JSON by encoding the request into an HTML-form.
-    if (options.emulateJSON) {
-        headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        params.body = params.json ? {model: params.json} : {};
-        delete params.json;
-    }
-
-    // For older servers, emulate HTTP by mimicking the HTTP method with `_method`
-    // And an `X-HTTP-Method-Override` header.
-    if (options.emulateHTTP && (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
-        params.type = 'POST';
-        if (options.emulateJSON) params.body._method = type;
-        headers['X-HTTP-Method-Override'] = type;
-    }
-
-    // When emulating JSON, we turn the body into a querystring.
-    // We do this later to let the emulateHTTP run its course.
-    if (options.emulateJSON) {
-        params.body = qs.stringify(params.body);
-    }
-
-    // Start setting ajaxConfig options (headers, xhrFields).
-    var ajaxConfig = (_.result(model, 'ajaxConfig') || {});
-
-    // Combine generated headers with user's headers.
-    if (ajaxConfig.headers) {
-        _.extend(headers, ajaxConfig.headers);
-    }
-    params.headers = headers;
-
-    //Set XDR for cross domain in IE8/9
-    if (ajaxConfig.useXDR) {
-        params.useXDR = true;
-    }
-
-    // Set raw xhr options.
-    if (ajaxConfig.xhrFields) {
-        var beforeSend = ajaxConfig.beforeSend;
-        params.beforeSend = function (req) {
-            for (var key in ajaxConfig.xhrFields) {
-                req[key] = ajaxConfig.xhrFields[key];
-            }
-            if (beforeSend) return beforeSend.apply(this, arguments);
-        };
-        params.xhrFields = ajaxConfig.xhrFields;
-    }
-
-    // Turn a jQuery.ajax formatted request into xhr compatible
-    params.method = params.type;
-
-    var ajaxSettings = _.extend(params, options);
-
-    // Make the request. The callback executes functions that are compatible
-    // With jQuery.ajax's syntax.
-    var request = options.xhr = xhr(ajaxSettings, function (err, resp, body) {
-        if (err && options.error) return options.error(resp, 'error', err.message);
-
-        // Parse body as JSON if a string.
-        if (body && typeof body === 'string') {
-            try {
-                body = JSON.parse(body);
-            } catch (e) {}
-        }
-        if (options.success) return options.success(body, 'success', resp);
-    });
-    model.trigger('request', model, request, options, ajaxSettings);
-    request.ajaxSettings = ajaxSettings;
-    return request;
-};
-
-// Map from CRUD to HTTP for our default `Backbone.sync` implementation.
-var methodMap = {
-    'create': 'POST',
-    'update': 'PUT',
-    'patch':  'PATCH',
-    'delete': 'DELETE',
-    'read':   'GET'
-};
-
-},{"qs":8,"underscore":20,"xhr":13}],8:[function(require,module,exports){
-module.exports = require('./lib');
-
-},{"./lib":9}],9:[function(require,module,exports){
-// Load modules
-
-var Stringify = require('./stringify');
-var Parse = require('./parse');
-
-
-// Declare internals
-
-var internals = {};
-
-
-module.exports = {
-    stringify: Stringify,
-    parse: Parse
-};
-
-},{"./parse":10,"./stringify":11}],10:[function(require,module,exports){
-// Load modules
-
-var Utils = require('./utils');
-
-
-// Declare internals
-
-var internals = {
-    delimiter: '&',
-    depth: 5,
-    arrayLimit: 20,
-    parametersLimit: 1000
-};
-
-
-internals.parseValues = function (str, delimiter) {
-
-    delimiter = typeof delimiter === 'string' ? delimiter : internals.delimiter;
-
-    var obj = {};
-    var parts = str.split(delimiter, internals.parametersLimit);
-
-    for (var i = 0, il = parts.length; i < il; ++i) {
-        var part = parts[i];
-        var pos = part.indexOf(']=') === -1 ? part.indexOf('=') : part.indexOf(']=') + 1;
-
-        if (pos === -1) {
-            obj[Utils.decode(part)] = '';
-        }
-        else {
-            var key = Utils.decode(part.slice(0, pos));
-            var val = Utils.decode(part.slice(pos + 1));
-
-            if (!obj[key]) {
-                obj[key] = val;
-            }
-            else {
-                obj[key] = [].concat(obj[key]).concat(val);
-            }
-        }
-    }
-
-    return obj;
-};
-
-
-internals.parseObject = function (chain, val) {
-
-    if (!chain.length) {
-        return val;
-    }
-
-    var root = chain.shift();
-
-    var obj = {};
-    if (root === '[]') {
-        obj = [];
-        obj = obj.concat(internals.parseObject(chain, val));
-    }
-    else {
-        var cleanRoot = root[0] === '[' && root[root.length - 1] === ']' ? root.slice(1, root.length - 1) : root;
-        var index = parseInt(cleanRoot, 10);
-        if (!isNaN(index) &&
-            root !== cleanRoot &&
-            index <= internals.arrayLimit) {
-
-            obj = [];
-            obj[index] = internals.parseObject(chain, val);
-        }
-        else {
-            obj[cleanRoot] = internals.parseObject(chain, val);
-        }
-    }
-
-    return obj;
-};
-
-
-internals.parseKeys = function (key, val, depth) {
-
-    if (!key) {
-        return;
-    }
-
-    // The regex chunks
-
-    var parent = /^([^\[\]]*)/;
-    var child = /(\[[^\[\]]*\])/g;
-
-    // Get the parent
-
-    var segment = parent.exec(key);
-
-    // Don't allow them to overwrite object prototype properties
-
-    if (Object.prototype.hasOwnProperty(segment[1])) {
-        return;
-    }
-
-    // Stash the parent if it exists
-
-    var keys = [];
-    if (segment[1]) {
-        keys.push(segment[1]);
-    }
-
-    // Loop through children appending to the array until we hit depth
-
-    var i = 0;
-    while ((segment = child.exec(key)) !== null && i < depth) {
-
-        ++i;
-        if (!Object.prototype.hasOwnProperty(segment[1].replace(/\[|\]/g, ''))) {
-            keys.push(segment[1]);
-        }
-    }
-
-    // If there's a remainder, just add whatever is left
-
-    if (segment) {
-        keys.push('[' + key.slice(segment.index) + ']');
-    }
-
-    return internals.parseObject(keys, val);
-};
-
-
-module.exports = function (str, depth, delimiter) {
-
-    if (str === '' ||
-        str === null ||
-        typeof str === 'undefined') {
-
-        return {};
-    }
-
-    if (typeof depth !== 'number') {
-        delimiter = depth;
-        depth = internals.depth;
-    }
-
-    var tempObj = typeof str === 'string' ? internals.parseValues(str, delimiter) : Utils.clone(str);
-    var obj = {};
-
-    // Iterate over the keys and setup the new object
-    //
-    for (var key in tempObj) {
-        if (tempObj.hasOwnProperty(key)) {
-            var newObj = internals.parseKeys(key, tempObj[key], depth);
-            obj = Utils.merge(obj, newObj);
-        }
-    }
-
-    return Utils.compact(obj);
-};
-
-},{"./utils":12}],11:[function(require,module,exports){
-(function (Buffer){
-// Load modules
-
-
-// Declare internals
-
-var internals = {
-    delimiter: '&'
-};
-
-
-internals.stringify = function (obj, prefix) {
-
-    if (Buffer.isBuffer(obj)) {
-        obj = obj.toString();
-    }
-    else if (obj instanceof Date) {
-        obj = obj.toISOString();
-    }
-    else if (obj === null) {
-        obj = '';
-    }
-
-    if (typeof obj === 'string' ||
-        typeof obj === 'number' ||
-        typeof obj === 'boolean') {
-
-        return [encodeURIComponent(prefix) + '=' + encodeURIComponent(obj)];
-    }
-
-    var values = [];
-
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            values = values.concat(internals.stringify(obj[key], prefix + '[' + key + ']'));
-        }
-    }
-
-    return values;
-};
-
-
-module.exports = function (obj, delimiter) {
-
-    delimiter = typeof delimiter === 'undefined' ? internals.delimiter : delimiter;
-
-    var keys = [];
-
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            keys = keys.concat(internals.stringify(obj[key], key));
-        }
-    }
-
-    return keys.join(delimiter);
-};
-
-}).call(this,require("buffer").Buffer)
-},{"buffer":26}],12:[function(require,module,exports){
-(function (Buffer){
-// Load modules
-
-
-// Declare internals
-
-var internals = {};
-
-
-exports.arrayToObject = function (source) {
-
-    var obj = {};
-    for (var i = 0, il = source.length; i < il; ++i) {
-        if (typeof source[i] !== 'undefined') {
-
-            obj[i] = source[i];
-        }
-    }
-
-    return obj;
-};
-
-
-exports.clone = function (source) {
-
-    if (typeof source !== 'object' ||
-        source === null) {
-
-        return source;
-    }
-
-    if (Buffer.isBuffer(source)) {
-        return source.toString();
-    }
-
-    var obj = Array.isArray(source) ? [] : {};
-    for (var i in source) {
-        if (source.hasOwnProperty(i)) {
-            obj[i] = exports.clone(source[i]);
-        }
-    }
-
-    return obj;
-};
-
-
-exports.merge = function (target, source) {
-
-    if (!source) {
-        return target;
-    }
-
-    var obj = exports.clone(target);
-
-    if (Array.isArray(source)) {
-        for (var i = 0, il = source.length; i < il; ++i) {
-            if (typeof source[i] !== 'undefined') {
-                if (typeof obj[i] === 'object') {
-                    obj[i] = exports.merge(obj[i], source[i]);
-                }
-                else {
-                    obj[i] = source[i];
-                }
-            }
-        }
-
-        return obj;
-    }
-
-    if (Array.isArray(obj)) {
-        obj = exports.arrayToObject(obj);
-    }
-
-    var keys = Object.keys(source);
-    for (var k = 0, kl = keys.length; k < kl; ++k) {
-        var key = keys[k];
-        var value = source[key];
-
-        if (value &&
-            typeof value === 'object') {
-
-            if (!obj[key]) {
-                obj[key] = exports.clone(value);
-            }
-            else {
-                obj[key] = exports.merge(obj[key], value);
-            }
-        }
-        else {
-            obj[key] = value;
-        }
-    }
-
-    return obj;
-};
-
-
-exports.decode = function (str) {
-
-    try {
-        return decodeURIComponent(str.replace(/\+/g, ' '));
-    } catch (e) {
-        return str;
-    }
-};
-
-
-exports.compact = function (obj) {
-
-    if (typeof obj !== 'object' || obj === null) {
-        return obj;
-    }
-
-    var compacted = {};
-
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            if (Array.isArray(obj[key])) {
-                compacted[key] = [];
-
-                for (var i = 0, l = obj[key].length; i < l; i++) {
-                    if (typeof obj[key][i] !== 'undefined') {
-                        compacted[key].push(obj[key][i]);
-                    }
-                }
-            }
-            else {
-                compacted[key] = exports.compact(obj[key]);
-            }
-        }
-    }
-
-    return compacted;
-};
-
-}).call(this,require("buffer").Buffer)
-},{"buffer":26}],13:[function(require,module,exports){
-var window = require("global/window")
-var once = require("once")
-var parseHeaders = require('parse-headers')
-
-var messages = {
-    "0": "Internal XMLHttpRequest Error",
-    "4": "4xx Client Error",
-    "5": "5xx Server Error"
-}
-
-var XHR = window.XMLHttpRequest || noop
-var XDR = "withCredentials" in (new XHR()) ? XHR : window.XDomainRequest
-
-module.exports = createXHR
-
-function createXHR(options, callback) {
-    if (typeof options === "string") {
-        options = { uri: options }
-    }
-
-    options = options || {}
-    callback = once(callback)
-
-    var xhr = options.xhr || null
-
-    if (!xhr) {
-        if (options.cors || options.useXDR) {
-            xhr = new XDR()
-        }else{
-            xhr = new XHR()
-        }
-    }
-
-    var uri = xhr.url = options.uri || options.url;
-    var method = xhr.method = options.method || "GET"
-    var body = options.body || options.data
-    var headers = xhr.headers = options.headers || {}
-    var sync = !!options.sync
-    var isJson = false
-    var key
-    var load = options.response ? loadResponse : loadXhr
-
-    if ("json" in options) {
-        isJson = true
-        headers["Accept"] = "application/json"
-        if (method !== "GET" && method !== "HEAD") {
-            headers["Content-Type"] = "application/json"
-            body = JSON.stringify(options.json)
-        }
-    }
-
-    xhr.onreadystatechange = readystatechange
-    xhr.onload = load
-    xhr.onerror = error
-    // IE9 must have onprogress be set to a unique function.
-    xhr.onprogress = function () {
-        // IE must die
-    }
-    // hate IE
-    xhr.ontimeout = noop
-    xhr.open(method, uri, !sync)
-                                    //backward compatibility
-    if (options.withCredentials || (options.cors && options.withCredentials !== false)) {
-        xhr.withCredentials = true
-    }
-
-    // Cannot set timeout with sync request
-    if (!sync) {
-        xhr.timeout = "timeout" in options ? options.timeout : 5000
-    }
-
-    if (xhr.setRequestHeader) {
-        for(key in headers){
-            if(headers.hasOwnProperty(key)){
-                xhr.setRequestHeader(key, headers[key])
-            }
-        }
-    } else if (options.headers) {
-        throw new Error("Headers cannot be set on an XDomainRequest object");
-    }
-
-    if ("responseType" in options) {
-        xhr.responseType = options.responseType
-    }
-    
-    if ("beforeSend" in options && 
-        typeof options.beforeSend === "function"
-    ) {
-        options.beforeSend(xhr)
-    }
-
-    xhr.send(body)
-
-    return xhr
-
-    function readystatechange() {
-        if (xhr.readyState === 4) {
-            load()
-        }
-    }
-
-    function getBody() {
-        // Chrome with requestType=blob throws errors arround when even testing access to responseText
-        var body = null
-
-        if (xhr.response) {
-            body = xhr.response
-        } else if (xhr.responseType === 'text' || !xhr.responseType) {
-            body = xhr.responseText || xhr.responseXML
-        }
-
-        if (isJson) {
-            try {
-                body = JSON.parse(body)
-            } catch (e) {}
-        }
-
-        return body
-    }
-
-    function getStatusCode() {
-        return xhr.status === 1223 ? 204 : xhr.status
-    }
-
-    // if we're getting a none-ok statusCode, build & return an error
-    function errorFromStatusCode(status) {
-        var error = null
-        if (status === 0 || (status >= 400 && status < 600)) {
-            var message = (typeof body === "string" ? body : false) ||
-                messages[String(status).charAt(0)]
-            error = new Error(message)
-            error.statusCode = status
-        };
-
-        return error;
-    }
-
-    // will load the data & process the response in a special response object
-    function loadResponse() {
-        var status = getStatusCode();
-        var error = errorFromStatusCode(status);
-        var response = {
-            body: getBody(),
-            statusCode: status,
-            statusText: xhr.statusText,
-            headers: parseHeaders(xhr.getAllResponseHeaders())
-        };
-
-        callback(error, response, response.body);
-    }
-
-    // will load the data and add some response properties to the source xhr
-    // and then respond with that
-    function loadXhr() {
-        var status = getStatusCode()
-        var error = errorFromStatusCode(status)
-
-        xhr.status = xhr.statusCode = status;
-        xhr.body = getBody();
-
-        callback(error, xhr, xhr.body);
-    }
-
-    function error(evt) {
-        callback(evt, xhr)
-    }
-}
-
-
-function noop() {}
-
-},{"global/window":14,"once":15,"parse-headers":19}],14:[function(require,module,exports){
-(function (global){
-if (typeof window !== "undefined") {
-    module.exports = window
-} else if (typeof global !== "undefined") {
-    module.exports = global
-} else {
-    module.exports = {}
-}
-
-}).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],15:[function(require,module,exports){
-module.exports = once
-
-once.proto = once(function () {
-  Object.defineProperty(Function.prototype, 'once', {
-    value: function () {
-      return once(this)
-    },
-    configurable: true
-  })
-})
-
-function once (fn) {
-  var called = false
-  return function () {
-    if (called) return
-    called = true
-    return fn.apply(this, arguments)
-  }
-}
-
-},{}],16:[function(require,module,exports){
-var isFunction = require('is-function')
-
-module.exports = forEach
-
-var toString = Object.prototype.toString
-var hasOwnProperty = Object.prototype.hasOwnProperty
-
-function forEach(list, iterator, context) {
-    if (!isFunction(iterator)) {
-        throw new TypeError('iterator must be a function')
-    }
-
-    if (arguments.length < 3) {
-        context = this
-    }
-    
-    if (toString.call(list) === '[object Array]')
-        forEachArray(list, iterator, context)
-    else if (typeof list === 'string')
-        forEachString(list, iterator, context)
-    else
-        forEachObject(list, iterator, context)
-}
-
-function forEachArray(array, iterator, context) {
-    for (var i = 0, len = array.length; i < len; i++) {
-        if (hasOwnProperty.call(array, i)) {
-            iterator.call(context, array[i], i, array)
-        }
-    }
-}
-
-function forEachString(string, iterator, context) {
-    for (var i = 0, len = string.length; i < len; i++) {
-        // no such thing as a sparse string.
-        iterator.call(context, string.charAt(i), i, string)
-    }
-}
-
-function forEachObject(object, iterator, context) {
-    for (var k in object) {
-        if (hasOwnProperty.call(object, k)) {
-            iterator.call(context, object[k], k, object)
-        }
-    }
-}
-
-},{"is-function":17}],17:[function(require,module,exports){
-module.exports = isFunction
-
-var toString = Object.prototype.toString
-
-function isFunction (fn) {
-  var string = toString.call(fn)
-  return string === '[object Function]' ||
-    (typeof fn === 'function' && string !== '[object RegExp]') ||
-    (typeof window !== 'undefined' &&
-     // IE8 and below
-     (fn === window.setTimeout ||
-      fn === window.alert ||
-      fn === window.confirm ||
-      fn === window.prompt))
-};
-
-},{}],18:[function(require,module,exports){
-
-exports = module.exports = trim;
-
-function trim(str){
-  return str.replace(/^\s*|\s*$/g, '');
-}
-
-exports.left = function(str){
-  return str.replace(/^\s*/, '');
-};
-
-exports.right = function(str){
-  return str.replace(/\s*$/, '');
-};
-
-},{}],19:[function(require,module,exports){
-var trim = require('trim')
-  , forEach = require('for-each')
-
-module.exports = function (headers) {
-  if (!headers)
-    return {}
-
-  var result = {}
-
-  forEach(
-      trim(headers).split('\n')
-    , function (row) {
-        var index = row.indexOf(':')
-
-        result[trim(row.slice(0, index)).toLowerCase()] =
-          trim(row.slice(index + 1))
-      }
-  )
-
-  return result
-}
-},{"for-each":16,"trim":18}],20:[function(require,module,exports){
+},{"underscore":2}],2:[function(require,module,exports){
 //     Underscore.js 1.6.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -3364,73 +1409,479 @@ module.exports = function (headers) {
   }
 }).call(this);
 
-},{}],21:[function(require,module,exports){
-//     Backbone.js 1.1.2
+},{}],3:[function(require,module,exports){
+var BackboneEvents = require('backbone-events-standalone');
+var classExtend = require('ampersand-class-extend');
+var isArray = require('is-array');
+var extend = require('extend-object');
+var slice = [].slice;
 
-//     (c) 2010-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-//     Backbone may be freely distributed under the MIT license.
-//     For all details and documentation:
-//     http://backbonejs.org
 
-(function(root, factory) {
+function Collection(models, options) {
+    options || (options = {});
+    if (options.model) this.model = options.model;
+    if (options.comparator) this.comparator = options.comparator;
+    if (options.parent) this.parent = options.parent;
+    this._reset();
+    this.initialize.apply(this, arguments);
+    if (models) this.reset(models, extend({silent: true}, options));
+}
 
-  // Set up Backbone appropriately for the environment. Start with AMD.
-  if (typeof define === 'function' && define.amd) {
-    define(['underscore', 'jquery', 'exports'], function(_, $, exports) {
-      // Export global even in AMD case in case this script is loaded with
-      // others that may still expect a global Backbone.
-      root.Backbone = factory(root, exports, _, $);
-    });
+extend(Collection.prototype, BackboneEvents, {
+    initialize: function () {},
 
-  // Next for Node.js or CommonJS. jQuery may not be needed as a module.
-  } else if (typeof exports !== 'undefined') {
-    var _ = require('underscore');
-    factory(root, exports, _);
+    mainIndex: 'id',
 
-  // Finally, as a browser global.
-  } else {
-    root.Backbone = factory(root, {}, root._, (root.jQuery || root.Zepto || root.ender || root.$));
+    indexes: [],
+
+    isModel: function (model) {
+        return this.model && model instanceof this.model;
+    },
+
+    add: function (models, options) {
+        return this.set(models, extend({merge: false, add: true, remove: false}, options));
+    },
+
+    // overridable parse method
+    parse: function (res, options) {
+        return res;
+    },
+
+    // overridable serialize method
+    serialize: function () {
+        return this.map(function (model) {
+            if (model.serialize) {
+                return model.serialize();
+            } else {
+                var out = {};
+                extend(out, model);
+                delete out.collection;
+                return out;
+            }
+        });
+    },
+
+    toJSON: function () {
+        return this.serialize();
+    },
+
+    set: function (models, options) {
+        options = extend({add: true, remove: true, merge: true}, options);
+        if (options.parse) models = this.parse(models, options);
+        var singular = !isArray(models);
+        models = singular ? (models ? [models] : []) : models.slice();
+        var id, model, attrs, existing, sort, i, length;
+        var at = options.at;
+        var sortable = this.comparator && (at == null) && options.sort !== false;
+        var sortAttr = ('string' === typeof this.comparator) ? this.comparator : null;
+        var toAdd = [], toRemove = [], modelMap = {};
+        var add = options.add, merge = options.merge, remove = options.remove;
+        var order = !sortable && add && remove ? [] : false;
+        var targetProto = this.model && this.model.prototype || Object.prototype;
+
+        // Turn bare objects into model references, and prevent invalid models
+        // from being added.
+        for (i = 0, length = models.length; i < length; i++) {
+            attrs = models[i] || {};
+            if (this.isModel(attrs)) {
+                id = model = attrs;
+            } else if (targetProto.generateId) {
+                id = targetProto.generateId(attrs);
+            } else {
+                id = attrs[targetProto.idAttribute || 'id'];
+            }
+
+            // If a duplicate is found, prevent it from being added and
+            // optionally merge it into the existing model.
+            if (existing = this.get(id)) {
+                if (remove) modelMap[existing.cid || existing.id] = true;
+                if (merge) {
+                    attrs = attrs === model ? model.attributes : attrs;
+                    if (options.parse) attrs = existing.parse(attrs, options);
+                    // if this is model
+                    if (existing.set) {
+                        existing.set(attrs, options);
+                        if (sortable && !sort && existing.hasChanged(sortAttr)) sort = true;
+                    } else {
+                        // if not just update the properties
+                        extend(existing, attrs);
+                    }
+                }
+                models[i] = existing;
+
+            // If this is a new, valid model, push it to the `toAdd` list.
+            } else if (add) {
+                model = models[i] = this._prepareModel(attrs, options);
+                if (!model) continue;
+                toAdd.push(model);
+                this._addReference(model, options);
+            }
+
+            // Do not add multiple models with the same `id`.
+            model = existing || model;
+            if (!model) continue;
+            if (order && ((model.isNew && model.isNew() || !model.id) || !modelMap[model.cid || model.id])) order.push(model);
+            modelMap[model.id] = true;
+        }
+
+        // Remove nonexistent models if appropriate.
+        if (remove) {
+            for (i = 0, length = this.length; i < length; i++) {
+                model = this.models[i];
+                if (!modelMap[model.cid || model.id]) toRemove.push(model);
+            }
+            if (toRemove.length) this.remove(toRemove, options);
+        }
+
+        // See if sorting is needed, update `length` and splice in new models.
+        if (toAdd.length || (order && order.length)) {
+            if (sortable) sort = true;
+            if (at != null) {
+                for (i = 0, length = toAdd.length; i < length; i++) {
+                    this.models.splice(at + i, 0, toAdd[i]);
+                }
+            } else {
+                var orderedModels = order || toAdd;
+                for (i = 0, length = orderedModels.length; i < length; i++) {
+                    this.models.push(orderedModels[i]);
+                }
+            }
+        }
+
+        // Silently sort the collection if appropriate.
+        if (sort) this.sort({silent: true});
+
+        // Unless silenced, it's time to fire all appropriate add/sort events.
+        if (!options.silent) {
+            for (i = 0, length = toAdd.length; i < length; i++) {
+                model = toAdd[i];
+                if (model.trigger) {
+                    model.trigger('add', model, this, options);
+                } else {
+                    this.trigger('add', model, this, options);
+                }
+            }
+            if (sort || (order && order.length)) this.trigger('sort', this, options);
+        }
+
+        // Return the added (or merged) model (or models).
+        return singular ? models[0] : models;
+    },
+
+    get: function (query, indexName) {
+        if (!query) return;
+        var index = this._indexes[indexName || this.mainIndex];
+        return index[query] || index[query[this.mainIndex]] || this._indexes.cid[query.cid];
+    },
+
+    // Get the model at the given index.
+    at: function (index) {
+        return this.models[index];
+    },
+
+    remove: function (models, options) {
+        var singular = !isArray(models);
+        var i, length, model, index;
+
+        models = singular ? [models] : slice.call(models);
+        options || (options = {});
+        for (i = 0, length = models.length; i < length; i++) {
+            model = models[i] = this.get(models[i]);
+            if (!model) continue;
+            this._deIndex(model);
+            index = this.models.indexOf(model);
+            this.models.splice(index, 1);
+            if (!options.silent) {
+                options.index = index;
+                if (model.trigger) {
+                    model.trigger('remove', model, this, options);
+                } else {
+                    this.trigger('remove', model, this, options);
+                }
+            }
+            this._removeReference(model, options);
+        }
+        return singular ? models[0] : models;
+    },
+
+    // When you have more items than you want to add or remove individually,
+    // you can reset the entire set with a new list of models, without firing
+    // any granular `add` or `remove` events. Fires `reset` when finished.
+    // Useful for bulk operations and optimizations.
+    reset: function (models, options) {
+        options || (options = {});
+        for (var i = 0, length = this.models.length; i < length; i++) {
+            this._removeReference(this.models[i], options);
+        }
+        options.previousModels = this.models;
+        this._reset();
+        models = this.add(models, extend({silent: true}, options));
+        if (!options.silent) this.trigger('reset', this, options);
+        return models;
+    },
+
+    sort: function (options) {
+        var self = this;
+        if (!this.comparator) throw new Error('Cannot sort a set without a comparator');
+        options || (options = {});
+
+        if (typeof this.comparator === 'string') {
+            this.models.sort(function (left, right) {
+                if (left.get) {
+                    left = left.get(self.comparator);
+                    right = right.get(self.comparator);
+                } else {
+                    left = left[self.comparator];
+                    right = right[self.comparator];
+                }
+                if (left > right || left === void 0) return 1;
+                if (left < right || right === void 0) return -1;
+                return 0;
+            });
+        } else if (this.comparator.length === 1) {
+            this.models.sort(function (left, right) {
+                left = self.comparator(left);
+                right = self.comparator(right);
+                if (left > right || left === void 0) return 1;
+                if (left < right || right === void 0) return -1;
+                return 0;
+            });
+        } else {
+            this.models.sort(this.comparator.bind(this));
+        }
+
+        if (!options.silent) this.trigger('sort', this, options);
+        return this;
+    },
+
+    // Private method to reset all internal state. Called when the collection
+    // is first initialized or reset.
+    _reset: function () {
+        var list = this.indexes || [];
+        var i = 0;
+        list.push(this.mainIndex);
+        list.push('cid');
+        var l = list.length;
+        this.models = [];
+        this._indexes = {};
+        for (; i < l; i++) {
+            this._indexes[list[i]] = {};
+        }
+    },
+
+    _prepareModel: function (attrs, options) {
+        // if we haven't defined a constructor, skip this
+        if (!this.model) return attrs;
+
+        if (this.isModel(attrs)) {
+            return attrs;
+        } else {
+            options = options ? extend({}, options) : {};
+            options.collection = this;
+            return new this.model(attrs, options);
+        }
+    },
+
+    _deIndex: function (model) {
+        for (var name in this._indexes) {
+            delete this._indexes[name][model[name] || (model.get && model.get(name))];
+        }
+    },
+
+    _index: function (model) {
+        for (var name in this._indexes) {
+            var indexVal = model[name] || (model.get && model.get(name));
+            if (indexVal) this._indexes[name][indexVal] = model;
+        }
+    },
+
+    // Internal method to create a model's ties to a collection.
+    _addReference: function (model, options) {
+        this._index(model);
+        if (!model.collection) model.collection = this;
+        if (model.on) model.on('all', this._onModelEvent, this);
+    },
+
+        // Internal method to sever a model's ties to a collection.
+    _removeReference: function (model, options) {
+        if (this === model.collection) delete model.collection;
+        this._deIndex(model);
+        if (model.off) model.off('all', this._onModelEvent, this);
+    },
+
+    _onModelEvent: function (event, model, collection, options) {
+        if ((event === 'add' || event === 'remove') && collection !== this) return;
+        if (event === 'destroy') this.remove(model, options);
+        if (model && event === 'change:' + model.idAttribute) {
+            this._deIndex(model);
+            this._index(model);
+        }
+        this.trigger.apply(this, arguments);
+    }
+});
+
+Object.defineProperties(Collection.prototype, {
+    length: {
+        get: function () {
+            return this.models.length;
+        }
+    },
+    isCollection: {
+        value: true
+    }
+});
+
+var arrayMethods = [
+    'indexOf',
+    'lastIndexOf',
+    'every',
+    'some',
+    'forEach',
+    'map',
+    'filter',
+    'reduce',
+    'reduceRight'
+];
+
+arrayMethods.forEach(function (method) {
+    Collection.prototype[method] = function () {
+        return this.models[method].apply(this.models, arguments);
+    };
+});
+
+// alias each/forEach for maximum compatibility
+Collection.prototype.each = Collection.prototype.forEach;
+
+Collection.extend = classExtend;
+
+module.exports = Collection;
+
+},{"ampersand-class-extend":4,"backbone-events-standalone":6,"extend-object":7,"is-array":8}],4:[function(require,module,exports){
+var objectExtend = require('extend-object');
+
+
+/// Following code is largely pasted from Backbone.js
+
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+var extend = function(protoProps) {
+    var parent = this;
+    var child;
+    var args = [].slice.call(arguments);
+
+    // The constructor function for the new subclass is either defined by you
+    // (the "constructor" property in your `extend` definition), or defaulted
+    // by us to simply call the parent's constructor.
+    if (protoProps && protoProps.hasOwnProperty('constructor')) {
+        child = protoProps.constructor;
+    } else {
+        child = function () {
+            return parent.apply(this, arguments);
+        };
+    }
+
+    // Add static properties to the constructor function from parent
+    objectExtend(child, parent);
+
+    // Set the prototype chain to inherit from `parent`, without calling
+    // `parent`'s constructor function.
+    var Surrogate = function(){ this.constructor = child; };
+    Surrogate.prototype = parent.prototype;
+    child.prototype = new Surrogate();
+
+    // Mix in all prototype properties to the subclass if supplied.
+    if (protoProps) {
+        args.unshift(child.prototype);
+        objectExtend.apply(null, args);
+    }
+
+    // Set a convenience property in case the parent's prototype is needed
+    // later.
+    child.__super__ = parent.prototype;
+
+    return child;
+};
+
+// Expose the extend function
+module.exports = extend;
+
+},{"extend-object":7}],5:[function(require,module,exports){
+/**
+ * Standalone extraction of Backbone.Events, no external dependency required.
+ * Degrades nicely when Backone/underscore are already available in the current
+ * global context.
+ *
+ * Note that docs suggest to use underscore's `_.extend()` method to add Events
+ * support to some given object. A `mixin()` method has been added to the Events
+ * prototype to avoid using underscore for that sole purpose:
+ *
+ *     var myEventEmitter = BackboneEvents.mixin({});
+ *
+ * Or for a function constructor:
+ *
+ *     function MyConstructor(){}
+ *     MyConstructor.prototype.foo = function(){}
+ *     BackboneEvents.mixin(MyConstructor.prototype);
+ *
+ * (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
+ * (c) 2013 Nicolas Perriault
+ */
+/* global exports:true, define, module */
+(function() {
+  var root = this,
+      breaker = {},
+      nativeForEach = Array.prototype.forEach,
+      hasOwnProperty = Object.prototype.hasOwnProperty,
+      slice = Array.prototype.slice,
+      idCounter = 0;
+
+  // Returns a partial implementation matching the minimal API subset required
+  // by Backbone.Events
+  function miniscore() {
+    return {
+      keys: Object.keys,
+
+      uniqueId: function(prefix) {
+        var id = ++idCounter + '';
+        return prefix ? prefix + id : id;
+      },
+
+      has: function(obj, key) {
+        return hasOwnProperty.call(obj, key);
+      },
+
+      each: function(obj, iterator, context) {
+        if (obj == null) return;
+        if (nativeForEach && obj.forEach === nativeForEach) {
+          obj.forEach(iterator, context);
+        } else if (obj.length === +obj.length) {
+          for (var i = 0, l = obj.length; i < l; i++) {
+            if (iterator.call(context, obj[i], i, obj) === breaker) return;
+          }
+        } else {
+          for (var key in obj) {
+            if (this.has(obj, key)) {
+              if (iterator.call(context, obj[key], key, obj) === breaker) return;
+            }
+          }
+        }
+      },
+
+      once: function(func) {
+        var ran = false, memo;
+        return function() {
+          if (ran) return memo;
+          ran = true;
+          memo = func.apply(this, arguments);
+          func = null;
+          return memo;
+        };
+      }
+    };
   }
 
-}(this, function(root, Backbone, _, $) {
-
-  // Initial Setup
-  // -------------
-
-  // Save the previous value of the `Backbone` variable, so that it can be
-  // restored later on, if `noConflict` is used.
-  var previousBackbone = root.Backbone;
-
-  // Create local references to array methods we'll want to use later.
-  var array = [];
-  var push = array.push;
-  var slice = array.slice;
-  var splice = array.splice;
-
-  // Current version of the library. Keep in sync with `package.json`.
-  Backbone.VERSION = '1.1.2';
-
-  // For Backbone's purposes, jQuery, Zepto, Ender, or My Library (kidding) owns
-  // the `$` variable.
-  Backbone.$ = $;
-
-  // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
-  // to its previous owner. Returns a reference to this Backbone object.
-  Backbone.noConflict = function() {
-    root.Backbone = previousBackbone;
-    return this;
-  };
-
-  // Turn on `emulateHTTP` to support legacy HTTP servers. Setting this option
-  // will fake `"PATCH"`, `"PUT"` and `"DELETE"` requests via the `_method` parameter and
-  // set a `X-Http-Method-Override` header.
-  Backbone.emulateHTTP = false;
-
-  // Turn on `emulateJSON` to support legacy servers that can't deal with direct
-  // `application/json` requests ... will encode the body as
-  // `application/x-www-form-urlencoded` instead and will send the model in a
-  // form param named `model`.
-  Backbone.emulateJSON = false;
+  var _ = miniscore(), Events;
 
   // Backbone.Events
   // ---------------
@@ -3445,7 +1896,7 @@ module.exports = function (headers) {
   //     object.on('expand', function(){ alert('expanded'); });
   //     object.trigger('expand');
   //
-  var Events = Backbone.Events = {
+  Events = {
 
     // Bind an event to a `callback` function. Passing `"all"` will bind
     // the callback to all events fired.
@@ -3478,9 +1929,10 @@ module.exports = function (headers) {
       var retain, ev, events, names, i, l, j, k;
       if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
       if (!name && !callback && !context) {
-        this._events = void 0;
+        this._events = {};
         return this;
       }
+
       names = name ? [name] : _.keys(this._events);
       for (i = 0, l = names.length; i < l; i++) {
         name = names[i];
@@ -3520,15 +1972,14 @@ module.exports = function (headers) {
     // Tell this object to stop listening to either specific events ... or
     // to every object it's currently listening to.
     stopListening: function(obj, name, callback) {
-      var listeningTo = this._listeningTo;
-      if (!listeningTo) return this;
-      var remove = !name && !callback;
-      if (!callback && typeof name === 'object') callback = this;
-      if (obj) (listeningTo = {})[obj._listenId] = obj;
-      for (var id in listeningTo) {
-        obj = listeningTo[id];
-        obj.off(name, callback, this);
-        if (remove || _.isEmpty(obj._events)) delete this._listeningTo[id];
+      var listeners = this._listeners;
+      if (!listeners) return this;
+      var deleteListener = !name && !callback;
+      if (typeof name === 'object') callback = this;
+      if (obj) (listeners = {})[obj._listenerId] = obj;
+      for (var id in listeners) {
+        listeners[id].off(name, callback, this);
+        if (deleteListener) delete this._listeners[id];
       }
       return this;
     }
@@ -3574,7 +2025,7 @@ module.exports = function (headers) {
       case 1: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1); return;
       case 2: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2); return;
       case 3: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2, a3); return;
-      default: while (++i < l) (ev = events[i]).callback.apply(ev.ctx, args); return;
+      default: while (++i < l) (ev = events[i]).callback.apply(ev.ctx, args);
     }
   };
 
@@ -3585,10 +2036,10 @@ module.exports = function (headers) {
   // listening to.
   _.each(listenMethods, function(implementation, method) {
     Events[method] = function(obj, name, callback) {
-      var listeningTo = this._listeningTo || (this._listeningTo = {});
-      var id = obj._listenId || (obj._listenId = _.uniqueId('l'));
-      listeningTo[id] = obj;
-      if (!callback && typeof name === 'object') callback = this;
+      var listeners = this._listeners || (this._listeners = {});
+      var id = obj._listenerId || (obj._listenerId = _.uniqueId('l'));
+      listeners[id] = obj;
+      if (typeof name === 'object') callback = this;
       obj[implementation](name, callback, this);
       return this;
     };
@@ -3598,166 +2049,489 @@ module.exports = function (headers) {
   Events.bind   = Events.on;
   Events.unbind = Events.off;
 
-  // Allow the `Backbone` object to serve as a global event bus, for folks who
-  // want global "pubsub" in a convenient place.
-  _.extend(Backbone, Events);
-
-  // Backbone.Model
-  // --------------
-
-  // Backbone **Models** are the basic data object in the framework --
-  // frequently representing a row in a table in a database on your server.
-  // A discrete chunk of data and a bunch of useful, related methods for
-  // performing computations and transformations on that data.
-
-  // Create a new model with the specified attributes. A client id (`cid`)
-  // is automatically generated and assigned for you.
-  var Model = Backbone.Model = function(attributes, options) {
-    var attrs = attributes || {};
-    options || (options = {});
-    this.cid = _.uniqueId('c');
-    this.attributes = {};
-    if (options.collection) this.collection = options.collection;
-    if (options.parse) attrs = this.parse(attrs, options) || {};
-    attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
-    this.set(attrs, options);
-    this.changed = {};
-    this.initialize.apply(this, arguments);
+  // Mixin utility
+  Events.mixin = function(proto) {
+    var exports = ['on', 'once', 'off', 'trigger', 'stopListening', 'listenTo',
+                   'listenToOnce', 'bind', 'unbind'];
+    _.each(exports, function(name) {
+      proto[name] = this[name];
+    }, this);
+    return proto;
   };
 
-  // Attach all inheritable methods to the Model prototype.
-  _.extend(Model.prototype, Events, {
+  // Export Events as BackboneEvents depending on current context
+  if (typeof define === "function") {
+    define(function() {
+      return Events;
+    });
+  } else if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = Events;
+    }
+    exports.BackboneEvents = Events;
+  } else {
+    root.BackboneEvents = Events;
+  }
+})(this);
 
-    // A hash of attributes whose current and previous value differ.
-    changed: null,
+},{}],6:[function(require,module,exports){
+module.exports = require('./backbone-events-standalone');
 
-    // The value returned during the last failed validation.
-    validationError: null,
+},{"./backbone-events-standalone":5}],7:[function(require,module,exports){
+var arr = [];
+var each = arr.forEach;
+var slice = arr.slice;
 
-    // The default name for the JSON `id` attribute is `"id"`. MongoDB and
-    // CouchDB users may want to set this to `"_id"`.
+
+module.exports = function(obj) {
+    each.call(slice.call(arguments, 1), function(source) {
+        if (source) {
+            for (var prop in source) {
+                obj[prop] = source[prop];
+            }
+        }
+    });
+    return obj;
+};
+
+},{}],8:[function(require,module,exports){
+
+/**
+ * isArray
+ */
+
+var isArray = Array.isArray;
+
+/**
+ * toString
+ */
+
+var str = Object.prototype.toString;
+
+/**
+ * Whether or not the given `val`
+ * is an array.
+ *
+ * example:
+ *
+ *        isArray([]);
+ *        // > true
+ *        isArray(arguments);
+ *        // > false
+ *        isArray('');
+ *        // > false
+ *
+ * @param {mixed} val
+ * @return {bool}
+ */
+
+module.exports = isArray || function (val) {
+  return !! val && '[object Array]' == str.call(val);
+};
+
+},{}],9:[function(require,module,exports){
+var State = require('ampersand-state');
+var _ = require('underscore');
+var sync = require('ampersand-sync');
+
+
+var Model = State.extend({
+    save: function (key, val, options) {
+        var attrs, method, xhr, attributes = this.attributes;
+
+        // Handle both `"key", value` and `{key: value}` -style arguments.
+        if (key == null || typeof key === 'object') {
+            attrs = key;
+            options = val;
+        } else {
+            (attrs = {})[key] = val;
+        }
+
+        options = _.extend({validate: true}, options);
+
+        // If we're not waiting and attributes exist, save acts as
+        // `set(attr).save(null, opts)` with validation. Otherwise, check if
+        // the model will be valid when the attributes, if any, are set.
+        if (attrs && !options.wait) {
+            if (!this.set(attrs, options)) return false;
+        } else {
+            if (!this._validate(attrs, options)) return false;
+        }
+
+        // After a successful server-side save, the client is (optionally)
+        // updated with the server-side state.
+        if (options.parse === void 0) options.parse = true;
+        var model = this;
+        var success = options.success;
+        options.success = function (resp) {
+            var serverAttrs = model.parse(resp, options);
+            if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
+            if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
+                return false;
+            }
+            if (success) success(model, resp, options);
+            model.trigger('sync', model, resp, options);
+        };
+        wrapError(this, options);
+
+        method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
+        if (method === 'patch') options.attrs = attrs;
+        // if we're waiting we haven't actually set our attributes yet so
+        // we need to do make sure we send right data
+        if (options.wait) options.attrs = _.extend(model.serialize(), attrs);
+        xhr = this.sync(method, this, options);
+
+        return xhr;
+    },
+
+    // Fetch the model from the server. If the server's representation of the
+    // model differs from its current attributes, they will be overridden,
+    // triggering a `"change"` event.
+    fetch: function (options) {
+        options = options ? _.clone(options) : {};
+        if (options.parse === void 0) options.parse = true;
+        var model = this;
+        var success = options.success;
+        options.success = function (resp) {
+            if (!model.set(model.parse(resp, options), options)) return false;
+            if (success) success(model, resp, options);
+            model.trigger('sync', model, resp, options);
+        };
+        wrapError(this, options);
+        return this.sync('read', this, options);
+    },
+
+    // Destroy this model on the server if it was already persisted.
+    // Optimistically removes the model from its collection, if it has one.
+    // If `wait: true` is passed, waits for the server to respond before removal.
+    destroy: function (options) {
+        options = options ? _.clone(options) : {};
+        var model = this;
+        var success = options.success;
+
+        var destroy = function () {
+            model.trigger('destroy', model, model.collection, options);
+        };
+
+        options.success = function (resp) {
+            if (options.wait || model.isNew()) destroy();
+            if (success) success(model, resp, options);
+            if (!model.isNew()) model.trigger('sync', model, resp, options);
+        };
+
+        if (this.isNew()) {
+            options.success();
+            return false;
+        }
+        wrapError(this, options);
+
+        var xhr = this.sync('delete', this, options);
+        if (!options.wait) destroy();
+        return xhr;
+    },
+
+    // Proxy `ampersand-sync` by default -- but override this if you need
+    // custom syncing semantics for *this* particular model.
+    sync: function () {
+        return sync.apply(this, arguments);
+    },
+
+    // Default URL for the model's representation on the server -- if you're
+    // using Backbone's restful methods, override this to change the endpoint
+    // that will be called.
+    url: function () {
+        var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
+        if (this.isNew()) return base;
+        return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
+    }
+});
+
+// Throw an error when a URL is needed, and none is supplied.
+var urlError = function () {
+    throw new Error('A "url" property or function must be specified');
+};
+
+// Wrap an optional error callback with a fallback error event.
+var wrapError = function (model, options) {
+    var error = options.error;
+    options.error = function (resp) {
+        if (error) error(model, resp, options);
+        model.trigger('error', model, resp, options);
+    };
+};
+
+module.exports = Model;
+
+},{"ampersand-state":10,"ampersand-sync":15,"underscore":28}],10:[function(require,module,exports){
+var _ = require('underscore');
+var BBEvents = require('backbone-events-standalone');
+var KeyTree = require('key-tree-store');
+var arrayNext = require('array-next');
+var changeRE = /^change:/;
+
+function Base(attrs, options) {
+    options || (options = {});
+    this.cid || (this.cid = _.uniqueId('state'));
+    this._events = {};
+    this._values = {};
+    this._definition = Object.create(this._definition);
+    if (options.parse) attrs = this.parse(attrs, options);
+    this.parent = options.parent;
+    this.collection = options.collection;
+    this._keyTree = new KeyTree();
+    this._initCollections();
+    this._initChildren();
+    this._cache = {};
+    this._previousAttributes = {};
+    if (attrs) this.set(attrs, _.extend({silent: true, initial: true}, options));
+    this._changed = {};
+    if (this._derived) this._initDerived();
+    if (options.init !== false) this.initialize.apply(this, arguments);
+}
+
+
+_.extend(Base.prototype, BBEvents, {
+    // can be allow, ignore, reject
+    extraProperties: 'ignore',
+
     idAttribute: 'id',
 
-    // Initialize is an empty function by default. Override it with your own
-    // initialization logic.
-    initialize: function(){},
+    namespaceAttribute: 'namespace',
 
-    // Return a copy of the model's `attributes` object.
-    toJSON: function(options) {
-      return _.clone(this.attributes);
+    typeAttribute: 'modelType',
+
+    // Stubbed out to be overwritten
+    initialize: function () {
+        return this;
     },
 
-    // Proxy `Backbone.sync` by default -- but override this if you need
-    // custom syncing semantics for *this* particular model.
-    sync: function() {
-      return Backbone.sync.apply(this, arguments);
+    // Get ID of model per configuration.
+    // Should *always* be how ID is determined by other code.
+    getId: function () {
+        return this[this.idAttribute];
     },
 
-    // Get the value of an attribute.
-    get: function(attr) {
-      return this.attributes[attr];
+    // Get namespace of model per configuration.
+    // Should *always* be how namespace is determined by other code.
+    getNamespace: function () {
+        return this[this.namespaceAttribute];
     },
 
-    // Get the HTML-escaped value of an attribute.
-    escape: function(attr) {
-      return _.escape(this.get(attr));
+    // Get type of model per configuration.
+    // Should *always* be how type is determined by other code.
+    getType: function () {
+        return this[this.typeAttribute];
     },
 
-    // Returns `true` if the attribute contains a value that is not null
-    // or undefined.
-    has: function(attr) {
-      return this.get(attr) != null;
+    // A model is new if it has never been saved to the server, and lacks an id.
+    isNew: function () {
+        return this.getId() == null;
     },
 
-    // Set a hash of model attributes on the object, firing `"change"`. This is
-    // the core primitive operation of a model, updating the data and notifying
-    // anyone who needs to know about the change in state. The heart of the beast.
-    set: function(key, val, options) {
-      var attr, attrs, unset, changes, silent, changing, prev, current;
-      if (key == null) return this;
+    // get HTML-escaped value of attribute
+    escape: function (attr) {
+        return _.escape(this.get(attr));
+    },
 
-      // Handle both `"key", value` and `{key: value}` -style arguments.
-      if (typeof key === 'object') {
-        attrs = key;
-        options = val;
-      } else {
-        (attrs = {})[key] = val;
-      }
+    // Check if the model is currently in a valid state.
+    isValid: function (options) {
+        return this._validate({}, _.extend(options || {}, { validate: true }));
+    },
 
-      options || (options = {});
+    // Parse can be used remap/restructure/rename incoming properties
+    // before they are applied to attributes.
+    parse: function (resp, options) {
+        return resp;
+    },
 
-      // Run validation.
-      if (!this._validate(attrs, options)) return false;
+    // Serialize is the inverse of `parse` it lets you massage data
+    // on the way out. Before, sending to server, for example.
+    serialize: function () {
+        var res = this.getAttributes({props: true}, true);
+        _.each(this._children, function (value, key) {
+            res[key] = this[key].serialize();
+        }, this);
+        _.each(this._collections, function (value, key) {
+            res[key] = this[key].serialize();
+        }, this);
+        return res;
+    },
 
-      // Extract attributes and options.
-      unset           = options.unset;
-      silent          = options.silent;
-      changes         = [];
-      changing        = this._changing;
-      this._changing  = true;
+    // Main set method used by generated setters/getters and can
+    // be used directly if you need to pass options or set multiple
+    // properties at once.
+    set: function (key, value, options) {
+        var self = this;
+        var extraProperties = this.extraProperties;
+        var triggers = [];
+        var changing, changes, newType, newVal, def, cast, err, attr,
+            attrs, dataType, silent, unset, currentVal, initial, hasChanged, isEqual;
 
-      if (!changing) {
-        this._previousAttributes = _.clone(this.attributes);
-        this.changed = {};
-      }
-      current = this.attributes, prev = this._previousAttributes;
-
-      // Check for changes of `id`.
-      if (this.idAttribute in attrs) this.id = attrs[this.idAttribute];
-
-      // For each `set` attribute, update or delete the current value.
-      for (attr in attrs) {
-        val = attrs[attr];
-        if (!_.isEqual(current[attr], val)) changes.push(attr);
-        if (!_.isEqual(prev[attr], val)) {
-          this.changed[attr] = val;
+        // Handle both `"key", value` and `{key: value}` -style arguments.
+        if (_.isObject(key) || key === null) {
+            attrs = key;
+            options = value;
         } else {
-          delete this.changed[attr];
+            attrs = {};
+            attrs[key] = value;
         }
-        unset ? delete current[attr] : current[attr] = val;
-      }
 
-      // Trigger all relevant attribute changes.
-      if (!silent) {
-        if (changes.length) this._pending = options;
-        for (var i = 0, l = changes.length; i < l; i++) {
-          this.trigger('change:' + changes[i], this, current[changes[i]], options);
-        }
-      }
+        options = options || {};
 
-      // You might be wondering why there's a `while` loop here. Changes can
-      // be recursively nested within `"change"` events.
-      if (changing) return this;
-      if (!silent) {
-        while (this._pending) {
-          options = this._pending;
-          this._pending = false;
-          this.trigger('change', this, options);
+        if (!this._validate(attrs, options)) return false;
+
+        // Extract attributes and options.
+        unset = options.unset;
+        silent = options.silent;
+        initial = options.initial;
+
+        changes = [];
+        changing = this._changing;
+        this._changing = true;
+
+        // if not already changing, store previous
+        if (!changing) {
+            this._previousAttributes = this.attributes;
+            this._changed = {};
         }
-      }
-      this._pending = false;
-      this._changing = false;
-      return this;
+
+        // For each `set` attribute...
+        for (attr in attrs) {
+            newVal = attrs[attr];
+            newType = typeof newVal;
+            currentVal = this._values[attr];
+            def = this._definition[attr];
+
+
+            if (!def) {
+                // if this is a child model or collection
+                if (this._children[attr] || this._collections[attr]) {
+                    this[attr].set(newVal, options);
+                    continue;
+                } else if (extraProperties === 'ignore') {
+                    continue;
+                } else if (extraProperties === 'reject') {
+                    throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and extraProperties not set to "ignore" or "allow"');
+                } else if (extraProperties === 'allow') {
+                    def = this._createPropertyDefinition(attr, 'any');
+                }
+            }
+
+            isEqual = this._getCompareForType(def.type);
+            dataType = this._dataTypes[def.type];
+
+            // check type if we have one
+            if (dataType && dataType.set) {
+                cast = dataType.set(newVal);
+                newVal = cast.val;
+                newType = cast.type;
+            }
+
+            // If we've defined a test, run it
+            if (def.test) {
+                err = def.test.call(this, newVal, newType);
+                if (err) {
+                    throw new TypeError('Property \'' + attr + '\' failed validation with error: ' + err);
+                }
+            }
+
+            // If we are required but undefined, throw error.
+            // If we are null and are not allowing null, throw error
+            // If we have a defined type and the new type doesn't match, and we are not null, throw error.
+
+            if (_.isUndefined(newVal) && def.required) {
+                throw new TypeError('Required property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
+            }
+            if (_.isNull(newVal) && def.required && !def.allowNull) {
+                throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + ' (cannot be null). Tried to set ' + newVal);
+            }
+            if ((def.type && def.type !== 'any' && def.type !== newType) && !_.isNull(newVal) && !_.isUndefined(newVal)) {
+                throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
+            }
+            if (def.values && !_.contains(def.values, newVal)) {
+                throw new TypeError('Property \'' + attr + '\' must be one of values: ' + def.values.join(', '));
+            }
+
+            hasChanged = !isEqual(currentVal, newVal, attr);
+
+            // enforce `setOnce` for properties if set
+            if (def.setOnce && currentVal !== undefined && hasChanged) {
+                throw new TypeError('Property \'' + key + '\' can only be set once.');
+            }
+
+            // keep track of changed attributes
+            // and push to changes array
+            if (hasChanged) {
+                changes.push({prev: currentVal, val: newVal, key: attr});
+                self._changed[attr] = newVal;
+            } else {
+                delete self._changed[attr];
+            }
+        }
+
+        // actually update our values
+        _.each(changes, function (change) {
+            self._previousAttributes[change.key] = change.prev;
+            if (unset) {
+                delete self._values[change.key];
+            } else {
+                self._values[change.key] = change.val;
+            }
+        });
+
+        if (!silent && changes.length) self._pending = true;
+        if (!silent) {
+            _.each(changes, function (change) {
+                self.trigger('change:' + change.key, self, change.val, options);
+            });
+        }
+
+        // You might be wondering why there's a `while` loop here. Changes can
+        // be recursively nested within `"change"` events.
+        if (changing) return this;
+        if (!silent) {
+            while (this._pending) {
+                this._pending = false;
+                this.trigger('change', this, options);
+            }
+        }
+        this._pending = false;
+        this._changing = false;
+        return this;
     },
 
-    // Remove an attribute from the model, firing `"change"`. `unset` is a noop
-    // if the attribute doesn't exist.
-    unset: function(attr, options) {
-      return this.set(attr, void 0, _.extend({}, options, {unset: true}));
+    get: function (attr) {
+        return this[attr];
     },
 
-    // Clear all attributes on the model, firing `"change"`.
-    clear: function(options) {
-      var attrs = {};
-      for (var key in this.attributes) attrs[key] = void 0;
-      return this.set(attrs, _.extend({}, options, {unset: true}));
+    // Toggle boolean properties or properties that have a `values`
+    // array in its definition.
+    toggle: function (property) {
+        var def = this._definition[property];
+        if (def.type === 'boolean') {
+            // if it's a bool, just flip it
+            this[property] = !this[property];
+        } else if (def && def.values) {
+            // If it's a property with an array of values
+            // skip to the next one looping back if at end.
+            this[property] = arrayNext(def.values, this[property]);
+        } else {
+            throw new TypeError('Can only toggle properties that are type `boolean` or have `values` array.');
+        }
+        return this;
+    },
+
+    // Get all of the attributes of the model at the time of the previous
+    // `"change"` event.
+    previousAttributes: function () {
+        return _.clone(this._previousAttributes);
     },
 
     // Determine if the model has changed since the last `"change"` event.
     // If you specify an attribute name, determine if that attribute has changed.
-    hasChanged: function(attr) {
-      if (attr == null) return !_.isEmpty(this.changed);
-      return _.has(this.changed, attr);
+    hasChanged: function (attr) {
+        if (attr == null) return !_.isEmpty(this._changed);
+        return _.has(this._changed, attr);
     },
 
     // Return an object containing all the attributes that have changed, or
@@ -3766,1217 +2540,1352 @@ module.exports = function (headers) {
     // persisted to the server. Unset attributes will be set to undefined.
     // You can also pass an attributes object to diff against the model,
     // determining if there *would be* a change.
-    changedAttributes: function(diff) {
-      if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
-      var val, changed = false;
-      var old = this._changing ? this._previousAttributes : this.attributes;
-      for (var attr in diff) {
-        if (_.isEqual(old[attr], (val = diff[attr]))) continue;
-        (changed || (changed = {}))[attr] = val;
-      }
-      return changed;
-    },
-
-    // Get the previous value of an attribute, recorded at the time the last
-    // `"change"` event was fired.
-    previous: function(attr) {
-      if (attr == null || !this._previousAttributes) return null;
-      return this._previousAttributes[attr];
-    },
-
-    // Get all of the attributes of the model at the time of the previous
-    // `"change"` event.
-    previousAttributes: function() {
-      return _.clone(this._previousAttributes);
-    },
-
-    // Fetch the model from the server. If the server's representation of the
-    // model differs from its current attributes, they will be overridden,
-    // triggering a `"change"` event.
-    fetch: function(options) {
-      options = options ? _.clone(options) : {};
-      if (options.parse === void 0) options.parse = true;
-      var model = this;
-      var success = options.success;
-      options.success = function(resp) {
-        if (!model.set(model.parse(resp, options), options)) return false;
-        if (success) success(model, resp, options);
-        model.trigger('sync', model, resp, options);
-      };
-      wrapError(this, options);
-      return this.sync('read', this, options);
-    },
-
-    // Set a hash of model attributes, and sync the model to the server.
-    // If the server returns an attributes hash that differs, the model's
-    // state will be `set` again.
-    save: function(key, val, options) {
-      var attrs, method, xhr, attributes = this.attributes;
-
-      // Handle both `"key", value` and `{key: value}` -style arguments.
-      if (key == null || typeof key === 'object') {
-        attrs = key;
-        options = val;
-      } else {
-        (attrs = {})[key] = val;
-      }
-
-      options = _.extend({validate: true}, options);
-
-      // If we're not waiting and attributes exist, save acts as
-      // `set(attr).save(null, opts)` with validation. Otherwise, check if
-      // the model will be valid when the attributes, if any, are set.
-      if (attrs && !options.wait) {
-        if (!this.set(attrs, options)) return false;
-      } else {
-        if (!this._validate(attrs, options)) return false;
-      }
-
-      // Set temporary attributes if `{wait: true}`.
-      if (attrs && options.wait) {
-        this.attributes = _.extend({}, attributes, attrs);
-      }
-
-      // After a successful server-side save, the client is (optionally)
-      // updated with the server-side state.
-      if (options.parse === void 0) options.parse = true;
-      var model = this;
-      var success = options.success;
-      options.success = function(resp) {
-        // Ensure attributes are restored during synchronous saves.
-        model.attributes = attributes;
-        var serverAttrs = model.parse(resp, options);
-        if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
-        if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
-          return false;
+    changedAttributes: function (diff) {
+        if (!diff) return this.hasChanged() ? _.clone(this._changed) : false;
+        var val, changed = false;
+        var old = this._changing ? this._previousAttributes : this.attributes;
+        var def, isEqual;
+        for (var attr in diff) {
+            def = this._definition[attr];
+            isEqual = this._getCompareForType(def && def.type);
+            if (isEqual(old[attr], (val = diff[attr]))) continue;
+            (changed || (changed = {}))[attr] = val;
         }
-        if (success) success(model, resp, options);
-        model.trigger('sync', model, resp, options);
-      };
-      wrapError(this, options);
-
-      method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
-      if (method === 'patch') options.attrs = attrs;
-      xhr = this.sync(method, this, options);
-
-      // Restore attributes.
-      if (attrs && options.wait) this.attributes = attributes;
-
-      return xhr;
+        return changed;
     },
 
-    // Destroy this model on the server if it was already persisted.
-    // Optimistically removes the model from its collection, if it has one.
-    // If `wait: true` is passed, waits for the server to respond before removal.
-    destroy: function(options) {
-      options = options ? _.clone(options) : {};
-      var model = this;
-      var success = options.success;
-
-      var destroy = function() {
-        model.trigger('destroy', model, model.collection, options);
-      };
-
-      options.success = function(resp) {
-        if (options.wait || model.isNew()) destroy();
-        if (success) success(model, resp, options);
-        if (!model.isNew()) model.trigger('sync', model, resp, options);
-      };
-
-      if (this.isNew()) {
-        options.success();
-        return false;
-      }
-      wrapError(this, options);
-
-      var xhr = this.sync('delete', this, options);
-      if (!options.wait) destroy();
-      return xhr;
+    toJSON: function () {
+        return this.serialize();
     },
 
-    // Default URL for the model's representation on the server -- if you're
-    // using Backbone's restful methods, override this to change the endpoint
-    // that will be called.
-    url: function() {
-      var base =
-        _.result(this, 'urlRoot') ||
-        _.result(this.collection, 'url') ||
-        urlError();
-      if (this.isNew()) return base;
-      return base.replace(/([^\/])$/, '$1/') + encodeURIComponent(this.id);
+    unset: function (attr, options) {
+        var def = this._definition[attr];
+        var type = def.type;
+        var val;
+        if (def.required) {
+            val = _.result(def, 'default');
+            return this.set(attr, val, options);
+        } else {
+            return this.set(attr, val, _.extend({}, options, {unset: true}));
+        }
     },
 
-    // **parse** converts a response into the hash of attributes to be `set` on
-    // the model. The default implementation is just to pass the response along.
-    parse: function(resp, options) {
-      return resp;
+    clear: function (options) {
+        var self = this;
+        _.each(_.keys(this.attributes), function (key) {
+            self.unset(key, options);
+        });
+        return this;
     },
 
-    // Create a new model with identical attributes to this one.
-    clone: function() {
-      return new this.constructor(this.attributes);
+    previous: function (attr) {
+        if (attr == null || !Object.keys(this._previousAttributes).length) return null;
+        return this._previousAttributes[attr];
     },
 
-    // A model is new if it has never been saved to the server, and lacks an id.
-    isNew: function() {
-      return !this.has(this.idAttribute);
+    // Get default values for a certain type
+    _getDefaultForType: function (type) {
+        var dataType = this._dataTypes[type];
+        return dataType && dataType.default;
     },
 
-    // Check if the model is currently in a valid state.
-    isValid: function(options) {
-      return this._validate({}, _.extend(options || {}, { validate: true }));
+    // Determine which comparison algorithm to use for comparing a property
+    _getCompareForType: function (type) {
+        var dataType = this._dataTypes[type];
+        if (dataType && dataType.compare) return _.bind(dataType.compare, this);
+        return _.isEqual;
     },
 
     // Run validation against the next complete set of model attributes,
     // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
-    _validate: function(attrs, options) {
-      if (!options.validate || !this.validate) return true;
-      attrs = _.extend({}, this.attributes, attrs);
-      var error = this.validationError = this.validate(attrs, options) || null;
-      if (!error) return true;
-      this.trigger('invalid', this, error, _.extend(options, {validationError: error}));
-      return false;
-    }
-
-  });
-
-  // Underscore methods that we want to implement on the Model.
-  var modelMethods = ['keys', 'values', 'pairs', 'invert', 'pick', 'omit'];
-
-  // Mix in each Underscore method as a proxy to `Model#attributes`.
-  _.each(modelMethods, function(method) {
-    Model.prototype[method] = function() {
-      var args = slice.call(arguments);
-      args.unshift(this.attributes);
-      return _[method].apply(_, args);
-    };
-  });
-
-  // Backbone.Collection
-  // -------------------
-
-  // If models tend to represent a single row of data, a Backbone Collection is
-  // more analagous to a table full of data ... or a small slice or page of that
-  // table, or a collection of rows that belong together for a particular reason
-  // -- all of the messages in this particular folder, all of the documents
-  // belonging to this particular author, and so on. Collections maintain
-  // indexes of their models, both in order, and for lookup by `id`.
-
-  // Create a new **Collection**, perhaps to contain a specific type of `model`.
-  // If a `comparator` is specified, the Collection will maintain
-  // its models in sort order, as they're added and removed.
-  var Collection = Backbone.Collection = function(models, options) {
-    options || (options = {});
-    if (options.model) this.model = options.model;
-    if (options.comparator !== void 0) this.comparator = options.comparator;
-    this._reset();
-    this.initialize.apply(this, arguments);
-    if (models) this.reset(models, _.extend({silent: true}, options));
-  };
-
-  // Default options for `Collection#set`.
-  var setOptions = {add: true, remove: true, merge: true};
-  var addOptions = {add: true, remove: false};
-
-  // Define the Collection's inheritable methods.
-  _.extend(Collection.prototype, Events, {
-
-    // The default model for a collection is just a **Backbone.Model**.
-    // This should be overridden in most cases.
-    model: Model,
-
-    // Initialize is an empty function by default. Override it with your own
-    // initialization logic.
-    initialize: function(){},
-
-    // The JSON representation of a Collection is an array of the
-    // models' attributes.
-    toJSON: function(options) {
-      return this.map(function(model){ return model.toJSON(options); });
+    _validate: function (attrs, options) {
+        if (!options.validate || !this.validate) return true;
+        attrs = _.extend({}, this.attributes, attrs);
+        var error = this.validationError = this.validate(attrs, options) || null;
+        if (!error) return true;
+        this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
+        return false;
     },
 
-    // Proxy `Backbone.sync` by default.
-    sync: function() {
-      return Backbone.sync.apply(this, arguments);
+    _createPropertyDefinition: function (name, desc, isSession) {
+        return createPropertyDefinition(this, name, desc, isSession);
     },
 
-    // Add a model, or list of models to the set.
-    add: function(models, options) {
-      return this.set(models, _.extend({merge: false}, options, addOptions));
+    // just makes friendlier errors when trying to define a new model
+    // only used when setting up original property definitions
+    _ensureValidType: function (type) {
+        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'].concat(_.keys(this._dataTypes)), type) ? type : undefined;
     },
 
-    // Remove a model, or a list of models from the set.
-    remove: function(models, options) {
-      var singular = !_.isArray(models);
-      models = singular ? [models] : _.clone(models);
-      options || (options = {});
-      var i, l, index, model;
-      for (i = 0, l = models.length; i < l; i++) {
-        model = models[i] = this.get(models[i]);
-        if (!model) continue;
-        delete this._byId[model.id];
-        delete this._byId[model.cid];
-        index = this.indexOf(model);
-        this.models.splice(index, 1);
-        this.length--;
-        if (!options.silent) {
-          options.index = index;
-          model.trigger('remove', model, this, options);
+    getAttributes: function (options, raw) {
+        options || (options = {});
+        _.defaults(options, {
+            session: false,
+            props: false,
+            derived: false
+        });
+        var res = {};
+        var val, item, def;
+        for (item in this._definition) {
+            def = this._definition[item];
+            if ((options.session && def.session) || (options.props && !def.session)) {
+                val = (raw) ? this._values[item] : this[item];
+                if (typeof val === 'undefined') val = _.result(def, 'default');
+                if (typeof val !== 'undefined') res[item] = val;
+            }
         }
-        this._removeReference(model, options);
-      }
-      return singular ? models[0] : models;
+        if (options.derived) {
+            for (item in this._derived) res[item] = this[item];
+        }
+        return res;
     },
 
-    // Update a collection by `set`-ing a new list of models, adding new ones,
-    // removing models that are no longer present, and merging models that
-    // already exist in the collection, as necessary. Similar to **Model#set**,
-    // the core operation for updating the data contained by the collection.
-    set: function(models, options) {
-      options = _.defaults({}, options, setOptions);
-      if (options.parse) models = this.parse(models, options);
-      var singular = !_.isArray(models);
-      models = singular ? (models ? [models] : []) : _.clone(models);
-      var i, l, id, model, attrs, existing, sort;
-      var at = options.at;
-      var targetModel = this.model;
-      var sortable = this.comparator && (at == null) && options.sort !== false;
-      var sortAttr = _.isString(this.comparator) ? this.comparator : null;
-      var toAdd = [], toRemove = [], modelMap = {};
-      var add = options.add, merge = options.merge, remove = options.remove;
-      var order = !sortable && add && remove ? [] : false;
+    _initDerived: function () {
+        var self = this;
 
-      // Turn bare objects into model references, and prevent invalid models
-      // from being added.
-      for (i = 0, l = models.length; i < l; i++) {
-        attrs = models[i] || {};
-        if (attrs instanceof Model) {
-          id = model = attrs;
+        _.each(this._derived, function (value, name) {
+            var def = self._derived[name];
+            def.deps = def.depList;
+
+            var update = function (options) {
+                options = options || {};
+
+                var newVal = def.fn.call(self);
+
+                if (self._cache[name] !== newVal || !def.cache) {
+                    if (def.cache) {
+                        self._previousAttributes[name] = self._cache[name];
+                    }
+                    self._cache[name] = newVal;
+                    self.trigger('change:' + name, self, self._cache[name]);
+                }
+            };
+
+            def.deps.forEach(function (propString) {
+                self._keyTree.add(propString, update);
+            });
+        });
+
+        this.on('all', function (eventName) {
+            if (changeRE.test(eventName)) {
+                self._keyTree.get(eventName.split(':')[1]).forEach(function (fn) {
+                    fn();
+                });
+            }
+        }, this);
+    },
+
+    _getDerivedProperty: function (name, flushCache) {
+        // is this a derived property that is cached
+        if (this._derived[name].cache) {
+            //set if this is the first time, or flushCache is set
+            if (flushCache || !this._cache.hasOwnProperty(name)) {
+                this._cache[name] = this._derived[name].fn.apply(this);
+            }
+            return this._cache[name];
         } else {
-          id = attrs[targetModel.prototype.idAttribute || 'id'];
+            return this._derived[name].fn.apply(this);
         }
+    },
 
-        // If a duplicate is found, prevent it from being added and
-        // optionally merge it into the existing model.
-        if (existing = this.get(id)) {
-          if (remove) modelMap[existing.cid] = true;
-          if (merge) {
-            attrs = attrs === model ? model.attributes : attrs;
-            if (options.parse) attrs = existing.parse(attrs, options);
-            existing.set(attrs, options);
-            if (sortable && !sort && existing.hasChanged(sortAttr)) sort = true;
-          }
-          models[i] = existing;
-
-        // If this is a new, valid model, push it to the `toAdd` list.
-        } else if (add) {
-          model = models[i] = this._prepareModel(attrs, options);
-          if (!model) continue;
-          toAdd.push(model);
-          this._addReference(model, options);
+    _initCollections: function () {
+        var coll;
+        if (!this._collections) return;
+        for (coll in this._collections) {
+            this[coll] = new this._collections[coll]([], {parent: this});
         }
+    },
 
-        // Do not add multiple models with the same `id`.
-        model = existing || model;
-        if (order && (model.isNew() || !modelMap[model.id])) order.push(model);
-        modelMap[model.id] = true;
-      }
-
-      // Remove nonexistent models if appropriate.
-      if (remove) {
-        for (i = 0, l = this.length; i < l; ++i) {
-          if (!modelMap[(model = this.models[i]).cid]) toRemove.push(model);
+    _initChildren: function () {
+        var child;
+        if (!this._children) return;
+        for (child in this._children) {
+            this[child] = new this._children[child]({}, {parent: this});
+            this.listenTo(this[child], 'all', this._getEventBubblingHandler(child));
         }
-        if (toRemove.length) this.remove(toRemove, options);
-      }
-
-      // See if sorting is needed, update `length` and splice in new models.
-      if (toAdd.length || (order && order.length)) {
-        if (sortable) sort = true;
-        this.length += toAdd.length;
-        if (at != null) {
-          for (i = 0, l = toAdd.length; i < l; i++) {
-            this.models.splice(at + i, 0, toAdd[i]);
-          }
-        } else {
-          if (order) this.models.length = 0;
-          var orderedModels = order || toAdd;
-          for (i = 0, l = orderedModels.length; i < l; i++) {
-            this.models.push(orderedModels[i]);
-          }
-        }
-      }
-
-      // Silently sort the collection if appropriate.
-      if (sort) this.sort({silent: true});
-
-      // Unless silenced, it's time to fire all appropriate add/sort events.
-      if (!options.silent) {
-        for (i = 0, l = toAdd.length; i < l; i++) {
-          (model = toAdd[i]).trigger('add', model, this, options);
-        }
-        if (sort || (order && order.length)) this.trigger('sort', this, options);
-      }
-
-      // Return the added (or merged) model (or models).
-      return singular ? models[0] : models;
     },
 
-    // When you have more items than you want to add or remove individually,
-    // you can reset the entire set with a new list of models, without firing
-    // any granular `add` or `remove` events. Fires `reset` when finished.
-    // Useful for bulk operations and optimizations.
-    reset: function(models, options) {
-      options || (options = {});
-      for (var i = 0, l = this.models.length; i < l; i++) {
-        this._removeReference(this.models[i], options);
-      }
-      options.previousModels = this.models;
-      this._reset();
-      models = this.add(models, _.extend({silent: true}, options));
-      if (!options.silent) this.trigger('reset', this, options);
-      return models;
+    // Returns a bound handler for doing event bubbling while
+    // adding a name to the change string.
+    _getEventBubblingHandler: function (propertyName) {
+        return _.bind(function (name, model, newValue) {
+            if (changeRE.test(name)) {
+                this.trigger('change:' + propertyName + '.' + name.split(':')[1], model, newValue);
+            } else if (name === 'change') {
+                this.trigger('change', this);
+            }
+        }, this);
     },
 
-    // Add a model to the end of the collection.
-    push: function(model, options) {
-      return this.add(model, _.extend({at: this.length}, options));
-    },
-
-    // Remove a model from the end of the collection.
-    pop: function(options) {
-      var model = this.at(this.length - 1);
-      this.remove(model, options);
-      return model;
-    },
-
-    // Add a model to the beginning of the collection.
-    unshift: function(model, options) {
-      return this.add(model, _.extend({at: 0}, options));
-    },
-
-    // Remove a model from the beginning of the collection.
-    shift: function(options) {
-      var model = this.at(0);
-      this.remove(model, options);
-      return model;
-    },
-
-    // Slice out a sub-array of models from the collection.
-    slice: function() {
-      return slice.apply(this.models, arguments);
-    },
-
-    // Get a model from the set by id.
-    get: function(obj) {
-      if (obj == null) return void 0;
-      return this._byId[obj] || this._byId[obj.id] || this._byId[obj.cid];
-    },
-
-    // Get the model at the given index.
-    at: function(index) {
-      return this.models[index];
-    },
-
-    // Return models with matching attributes. Useful for simple cases of
-    // `filter`.
-    where: function(attrs, first) {
-      if (_.isEmpty(attrs)) return first ? void 0 : [];
-      return this[first ? 'find' : 'filter'](function(model) {
-        for (var key in attrs) {
-          if (attrs[key] !== model.get(key)) return false;
+    // Check that all required attributes are present
+    _verifyRequired: function () {
+        var attrs = this.attributes; // should include session
+        for (var def in this._definition) {
+            if (this._definition[def].required && typeof attrs[def] === 'undefined') {
+                return false;
+            }
         }
         return true;
-      });
-    },
-
-    // Return the first model with matching attributes. Useful for simple cases
-    // of `find`.
-    findWhere: function(attrs) {
-      return this.where(attrs, true);
-    },
-
-    // Force the collection to re-sort itself. You don't need to call this under
-    // normal circumstances, as the set will maintain sort order as each item
-    // is added.
-    sort: function(options) {
-      if (!this.comparator) throw new Error('Cannot sort a set without a comparator');
-      options || (options = {});
-
-      // Run sort based on type of `comparator`.
-      if (_.isString(this.comparator) || this.comparator.length === 1) {
-        this.models = this.sortBy(this.comparator, this);
-      } else {
-        this.models.sort(_.bind(this.comparator, this));
-      }
-
-      if (!options.silent) this.trigger('sort', this, options);
-      return this;
-    },
-
-    // Pluck an attribute from each model in the collection.
-    pluck: function(attr) {
-      return _.invoke(this.models, 'get', attr);
-    },
-
-    // Fetch the default set of models for this collection, resetting the
-    // collection when they arrive. If `reset: true` is passed, the response
-    // data will be passed through the `reset` method instead of `set`.
-    fetch: function(options) {
-      options = options ? _.clone(options) : {};
-      if (options.parse === void 0) options.parse = true;
-      var success = options.success;
-      var collection = this;
-      options.success = function(resp) {
-        var method = options.reset ? 'reset' : 'set';
-        collection[method](resp, options);
-        if (success) success(collection, resp, options);
-        collection.trigger('sync', collection, resp, options);
-      };
-      wrapError(this, options);
-      return this.sync('read', this, options);
-    },
-
-    // Create a new instance of a model in this collection. Add the model to the
-    // collection immediately, unless `wait: true` is passed, in which case we
-    // wait for the server to agree.
-    create: function(model, options) {
-      options = options ? _.clone(options) : {};
-      if (!(model = this._prepareModel(model, options))) return false;
-      if (!options.wait) this.add(model, options);
-      var collection = this;
-      var success = options.success;
-      options.success = function(model, resp) {
-        if (options.wait) collection.add(model, options);
-        if (success) success(model, resp, options);
-      };
-      model.save(null, options);
-      return model;
-    },
-
-    // **parse** converts a response into a list of models to be added to the
-    // collection. The default implementation is just to pass it through.
-    parse: function(resp, options) {
-      return resp;
-    },
-
-    // Create a new collection with an identical list of models as this one.
-    clone: function() {
-      return new this.constructor(this.models);
-    },
-
-    // Private method to reset all internal state. Called when the collection
-    // is first initialized or reset.
-    _reset: function() {
-      this.length = 0;
-      this.models = [];
-      this._byId  = {};
-    },
-
-    // Prepare a hash of attributes (or other model) to be added to this
-    // collection.
-    _prepareModel: function(attrs, options) {
-      if (attrs instanceof Model) return attrs;
-      options = options ? _.clone(options) : {};
-      options.collection = this;
-      var model = new this.model(attrs, options);
-      if (!model.validationError) return model;
-      this.trigger('invalid', this, model.validationError, options);
-      return false;
-    },
-
-    // Internal method to create a model's ties to a collection.
-    _addReference: function(model, options) {
-      this._byId[model.cid] = model;
-      if (model.id != null) this._byId[model.id] = model;
-      if (!model.collection) model.collection = this;
-      model.on('all', this._onModelEvent, this);
-    },
-
-    // Internal method to sever a model's ties to a collection.
-    _removeReference: function(model, options) {
-      if (this === model.collection) delete model.collection;
-      model.off('all', this._onModelEvent, this);
-    },
-
-    // Internal method called every time a model in the set fires an event.
-    // Sets need to update their indexes when models change ids. All other
-    // events simply proxy through. "add" and "remove" events that originate
-    // in other collections are ignored.
-    _onModelEvent: function(event, model, collection, options) {
-      if ((event === 'add' || event === 'remove') && collection !== this) return;
-      if (event === 'destroy') this.remove(model, options);
-      if (model && event === 'change:' + model.idAttribute) {
-        delete this._byId[model.previous(model.idAttribute)];
-        if (model.id != null) this._byId[model.id] = model;
-      }
-      this.trigger.apply(this, arguments);
     }
+});
 
-  });
-
-  // Underscore methods that we want to implement on the Collection.
-  // 90% of the core usefulness of Backbone Collections is actually implemented
-  // right here:
-  var methods = ['forEach', 'each', 'map', 'collect', 'reduce', 'foldl',
-    'inject', 'reduceRight', 'foldr', 'find', 'detect', 'filter', 'select',
-    'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
-    'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
-    'tail', 'drop', 'last', 'without', 'difference', 'indexOf', 'shuffle',
-    'lastIndexOf', 'isEmpty', 'chain', 'sample'];
-
-  // Mix in each Underscore method as a proxy to `Collection#models`.
-  _.each(methods, function(method) {
-    Collection.prototype[method] = function() {
-      var args = slice.call(arguments);
-      args.unshift(this.models);
-      return _[method].apply(_, args);
-    };
-  });
-
-  // Underscore methods that take a property name as an argument.
-  var attributeMethods = ['groupBy', 'countBy', 'sortBy', 'indexBy'];
-
-  // Use attributes instead of properties.
-  _.each(attributeMethods, function(method) {
-    Collection.prototype[method] = function(value, context) {
-      var iterator = _.isFunction(value) ? value : function(model) {
-        return model.get(value);
-      };
-      return _[method](this.models, iterator, context);
-    };
-  });
-
-  // Backbone.View
-  // -------------
-
-  // Backbone Views are almost more convention than they are actual code. A View
-  // is simply a JavaScript object that represents a logical chunk of UI in the
-  // DOM. This might be a single item, an entire list, a sidebar or panel, or
-  // even the surrounding frame which wraps your whole app. Defining a chunk of
-  // UI as a **View** allows you to define your DOM events declaratively, without
-  // having to worry about render order ... and makes it easy for the view to
-  // react to specific changes in the state of your models.
-
-  // Creating a Backbone.View creates its initial element outside of the DOM,
-  // if an existing element is not provided...
-  var View = Backbone.View = function(options) {
-    this.cid = _.uniqueId('view');
-    options || (options = {});
-    _.extend(this, _.pick(options, viewOptions));
-    this._ensureElement();
-    this.initialize.apply(this, arguments);
-    this.delegateEvents();
-  };
-
-  // Cached regex to split keys for `delegate`.
-  var delegateEventSplitter = /^(\S+)\s*(.*)$/;
-
-  // List of view options to be merged as properties.
-  var viewOptions = ['model', 'collection', 'el', 'id', 'attributes', 'className', 'tagName', 'events'];
-
-  // Set up all inheritable **Backbone.View** properties and methods.
-  _.extend(View.prototype, Events, {
-
-    // The default `tagName` of a View's element is `"div"`.
-    tagName: 'div',
-
-    // jQuery delegate for element lookup, scoped to DOM elements within the
-    // current view. This should be preferred to global lookups where possible.
-    $: function(selector) {
-      return this.$el.find(selector);
-    },
-
-    // Initialize is an empty function by default. Override it with your own
-    // initialization logic.
-    initialize: function(){},
-
-    // **render** is the core function that your view should override, in order
-    // to populate its element (`this.el`), with the appropriate HTML. The
-    // convention is for **render** to always return `this`.
-    render: function() {
-      return this;
-    },
-
-    // Remove this view by taking the element out of the DOM, and removing any
-    // applicable Backbone.Events listeners.
-    remove: function() {
-      this.$el.remove();
-      this.stopListening();
-      return this;
-    },
-
-    // Change the view's element (`this.el` property), including event
-    // re-delegation.
-    setElement: function(element, delegate) {
-      if (this.$el) this.undelegateEvents();
-      this.$el = element instanceof Backbone.$ ? element : Backbone.$(element);
-      this.el = this.$el[0];
-      if (delegate !== false) this.delegateEvents();
-      return this;
-    },
-
-    // Set callbacks, where `this.events` is a hash of
-    //
-    // *{"event selector": "callback"}*
-    //
-    //     {
-    //       'mousedown .title':  'edit',
-    //       'click .button':     'save',
-    //       'click .open':       function(e) { ... }
-    //     }
-    //
-    // pairs. Callbacks will be bound to the view, with `this` set properly.
-    // Uses event delegation for efficiency.
-    // Omitting the selector binds the event to `this.el`.
-    // This only works for delegate-able events: not `focus`, `blur`, and
-    // not `change`, `submit`, and `reset` in Internet Explorer.
-    delegateEvents: function(events) {
-      if (!(events || (events = _.result(this, 'events')))) return this;
-      this.undelegateEvents();
-      for (var key in events) {
-        var method = events[key];
-        if (!_.isFunction(method)) method = this[events[key]];
-        if (!method) continue;
-
-        var match = key.match(delegateEventSplitter);
-        var eventName = match[1], selector = match[2];
-        method = _.bind(method, this);
-        eventName += '.delegateEvents' + this.cid;
-        if (selector === '') {
-          this.$el.on(eventName, method);
-        } else {
-          this.$el.on(eventName, selector, method);
+// getter for attributes
+Object.defineProperties(Base.prototype, {
+    attributes: {
+        get: function () {
+            return this.getAttributes({props: true, session: true});
         }
-      }
-      return this;
     },
-
-    // Clears all callbacks previously bound to the view with `delegateEvents`.
-    // You usually don't need to use this, but may wish to if you have multiple
-    // Backbone views attached to the same DOM element.
-    undelegateEvents: function() {
-      this.$el.off('.delegateEvents' + this.cid);
-      return this;
+    all: {
+        get: function () {
+            return this.getAttributes({
+                session: true,
+                props: true,
+                derived: true
+            });
+        }
     },
-
-    // Ensure that the View has a DOM element to render into.
-    // If `this.el` is a string, pass it through `$()`, take the first
-    // matching element, and re-assign it to `el`. Otherwise, create
-    // an element from the `id`, `className` and `tagName` properties.
-    _ensureElement: function() {
-      if (!this.el) {
-        var attrs = _.extend({}, _.result(this, 'attributes'));
-        if (this.id) attrs.id = _.result(this, 'id');
-        if (this.className) attrs['class'] = _.result(this, 'className');
-        var $el = Backbone.$('<' + _.result(this, 'tagName') + '>').attr(attrs);
-        this.setElement($el, false);
-      } else {
-        this.setElement(_.result(this, 'el'), false);
-      }
+    isState: {
+        get: function () { return true; },
+        set: function () { }
     }
+});
 
-  });
+// helper for creating/storing property definitions and creating
+// appropriate getters/setters
+function createPropertyDefinition(object, name, desc, isSession) {
+    var def = object._definition[name] = {};
+    var type, descArray;
 
-  // Backbone.sync
-  // -------------
+    if (_.isString(desc)) {
+        // grab our type if all we've got is a string
+        type = object._ensureValidType(desc);
+        if (type) def.type = type;
+    } else {
 
-  // Override this function to change the manner in which Backbone persists
-  // models to the server. You will be passed the type of request, and the
-  // model in question. By default, makes a RESTful Ajax request
-  // to the model's `url()`. Some possible customizations could be:
-  //
-  // * Use `setTimeout` to batch rapid-fire updates into a single request.
-  // * Send up the models as XML instead of JSON.
-  // * Persist models via WebSockets instead of Ajax.
-  //
-  // Turn on `Backbone.emulateHTTP` in order to send `PUT` and `DELETE` requests
-  // as `POST`, with a `_method` parameter containing the true HTTP method,
-  // as well as all requests with the body as `application/x-www-form-urlencoded`
-  // instead of `application/json` with the model in a param named `model`.
-  // Useful when interfacing with server-side languages like **PHP** that make
-  // it difficult to read the body of `PUT` requests.
-  Backbone.sync = function(method, model, options) {
-    var type = methodMap[method];
+        //Transform array of ['type', required, default] to object form
+        if (_.isArray(desc)) {
+            descArray = desc;
+            desc = {
+                type: descArray[0],
+                required: descArray[1],
+                default: descArray[2]
+            };
+        }
 
-    // Default options, unless specified.
-    _.defaults(options || (options = {}), {
-      emulateHTTP: Backbone.emulateHTTP,
-      emulateJSON: Backbone.emulateJSON
+        type = object._ensureValidType(desc.type);
+        if (type) def.type = type;
+
+        if (desc.required) def.required = true;
+
+        if (desc.default && typeof desc.default === 'object') {
+            throw new TypeError('The default value for ' + name + ' cannot be an object/array, must be a value or a function which returns a value/object/array');
+        }
+        def.default = desc.default;
+
+        def.allowNull = desc.allowNull ? desc.allowNull : false;
+        if (desc.setOnce) def.setOnce = true;
+        if (def.required && _.isUndefined(def.default)) def.default = object._getDefaultForType(type);
+        def.test = desc.test;
+        def.values = desc.values;
+    }
+    if (isSession) def.session = true;
+
+    // define a getter/setter on the prototype
+    // but they get/set on the instance
+    Object.defineProperty(object, name, {
+        set: function (val) {
+            this.set(name, val);
+        },
+        get: function () {
+            var result = this._values[name];
+            var typeDef = this._dataTypes[def.type];
+            if (typeof result !== 'undefined') {
+                if (typeDef && typeDef.get) {
+                    result = typeDef.get(result);
+                }
+                return result;
+            }
+            return _.result(def, 'default');
+        }
     });
 
-    // Default JSON-request options.
-    var params = {type: type, dataType: 'json'};
+    return def;
+}
 
-    // Ensure that we have a URL.
-    if (!options.url) {
-      params.url = _.result(model, 'url') || urlError();
-    }
+// helper for creating derived property definitions
+function createDerivedProperty(modelProto, name, definition) {
+    var def = modelProto._derived[name] = {
+        fn: _.isFunction(definition) ? definition : definition.fn,
+        cache: (definition.cache !== false),
+        depList: definition.deps || []
+    };
 
-    // Ensure that we have the appropriate request data.
-    if (options.data == null && model && (method === 'create' || method === 'update' || method === 'patch')) {
-      params.contentType = 'application/json';
-      params.data = JSON.stringify(options.attrs || model.toJSON(options));
-    }
+    // add to our shared dependency list
+    _.each(def.depList, function (dep) {
+        modelProto._deps[dep] = _(modelProto._deps[dep] || []).union([name]);
+    });
 
-    // For older servers, emulate JSON by encoding the request into an HTML-form.
-    if (options.emulateJSON) {
-      params.contentType = 'application/x-www-form-urlencoded';
-      params.data = params.data ? {model: params.data} : {};
-    }
-
-    // For older servers, emulate HTTP by mimicking the HTTP method with `_method`
-    // And an `X-HTTP-Method-Override` header.
-    if (options.emulateHTTP && (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
-      params.type = 'POST';
-      if (options.emulateJSON) params.data._method = type;
-      var beforeSend = options.beforeSend;
-      options.beforeSend = function(xhr) {
-        xhr.setRequestHeader('X-HTTP-Method-Override', type);
-        if (beforeSend) return beforeSend.apply(this, arguments);
-      };
-    }
-
-    // Don't process data on a non-GET request.
-    if (params.type !== 'GET' && !options.emulateJSON) {
-      params.processData = false;
-    }
-
-    // If we're sending a `PATCH` request, and we're in an old Internet Explorer
-    // that still has ActiveX enabled by default, override jQuery to use that
-    // for XHR instead. Remove this line when jQuery supports `PATCH` on IE8.
-    if (params.type === 'PATCH' && noXhrPatch) {
-      params.xhr = function() {
-        return new ActiveXObject("Microsoft.XMLHTTP");
-      };
-    }
-
-    // Make the request, allowing the user to override any Ajax options.
-    var xhr = options.xhr = Backbone.ajax(_.extend(params, options));
-    model.trigger('request', model, xhr, options);
-    return xhr;
-  };
-
-  var noXhrPatch =
-    typeof window !== 'undefined' && !!window.ActiveXObject &&
-      !(window.XMLHttpRequest && (new XMLHttpRequest).dispatchEvent);
-
-  // Map from CRUD to HTTP for our default `Backbone.sync` implementation.
-  var methodMap = {
-    'create': 'POST',
-    'update': 'PUT',
-    'patch':  'PATCH',
-    'delete': 'DELETE',
-    'read':   'GET'
-  };
-
-  // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
-  // Override this if you'd like to use a different library.
-  Backbone.ajax = function() {
-    return Backbone.$.ajax.apply(Backbone.$, arguments);
-  };
-
-  // Backbone.Router
-  // ---------------
-
-  // Routers map faux-URLs to actions, and fire events when routes are
-  // matched. Creating a new one sets its `routes` hash, if not set statically.
-  var Router = Backbone.Router = function(options) {
-    options || (options = {});
-    if (options.routes) this.routes = options.routes;
-    this._bindRoutes();
-    this.initialize.apply(this, arguments);
-  };
-
-  // Cached regular expressions for matching named param parts and splatted
-  // parts of route strings.
-  var optionalParam = /\((.*?)\)/g;
-  var namedParam    = /(\(\?)?:\w+/g;
-  var splatParam    = /\*\w+/g;
-  var escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g;
-
-  // Set up all inheritable **Backbone.Router** properties and methods.
-  _.extend(Router.prototype, Events, {
-
-    // Initialize is an empty function by default. Override it with your own
-    // initialization logic.
-    initialize: function(){},
-
-    // Manually bind a single named route to a callback. For example:
-    //
-    //     this.route('search/:query/p:num', 'search', function(query, num) {
-    //       ...
-    //     });
-    //
-    route: function(route, name, callback) {
-      if (!_.isRegExp(route)) route = this._routeToRegExp(route);
-      if (_.isFunction(name)) {
-        callback = name;
-        name = '';
-      }
-      if (!callback) callback = this[name];
-      var router = this;
-      Backbone.history.route(route, function(fragment) {
-        var args = router._extractParameters(route, fragment);
-        router.execute(callback, args);
-        router.trigger.apply(router, ['route:' + name].concat(args));
-        router.trigger('route', name, args);
-        Backbone.history.trigger('route', router, name, args);
-      });
-      return this;
-    },
-
-    // Execute a route handler with the provided parameters.  This is an
-    // excellent place to do pre-route setup or post-route cleanup.
-    execute: function(callback, args) {
-      if (callback) callback.apply(this, args);
-    },
-
-    // Simple proxy to `Backbone.history` to save a fragment into the history.
-    navigate: function(fragment, options) {
-      Backbone.history.navigate(fragment, options);
-      return this;
-    },
-
-    // Bind all defined routes to `Backbone.history`. We have to reverse the
-    // order of the routes here to support behavior where the most general
-    // routes can be defined at the bottom of the route map.
-    _bindRoutes: function() {
-      if (!this.routes) return;
-      this.routes = _.result(this, 'routes');
-      var route, routes = _.keys(this.routes);
-      while ((route = routes.pop()) != null) {
-        this.route(route, this.routes[route]);
-      }
-    },
-
-    // Convert a route string into a regular expression, suitable for matching
-    // against the current location hash.
-    _routeToRegExp: function(route) {
-      route = route.replace(escapeRegExp, '\\$&')
-                   .replace(optionalParam, '(?:$1)?')
-                   .replace(namedParam, function(match, optional) {
-                     return optional ? match : '([^/?]+)';
-                   })
-                   .replace(splatParam, '([^?]*?)');
-      return new RegExp('^' + route + '(?:\\?([\\s\\S]*))?$');
-    },
-
-    // Given a route, and a URL fragment that it matches, return the array of
-    // extracted decoded parameters. Empty or unmatched parameters will be
-    // treated as `null` to normalize cross-browser behavior.
-    _extractParameters: function(route, fragment) {
-      var params = route.exec(fragment).slice(1);
-      return _.map(params, function(param, i) {
-        // Don't decode the search params.
-        if (i === params.length - 1) return param || null;
-        return param ? decodeURIComponent(param) : null;
-      });
-    }
-
-  });
-
-  // Backbone.History
-  // ----------------
-
-  // Handles cross-browser history management, based on either
-  // [pushState](http://diveintohtml5.info/history.html) and real URLs, or
-  // [onhashchange](https://developer.mozilla.org/en-US/docs/DOM/window.onhashchange)
-  // and URL fragments. If the browser supports neither (old IE, natch),
-  // falls back to polling.
-  var History = Backbone.History = function() {
-    this.handlers = [];
-    _.bindAll(this, 'checkUrl');
-
-    // Ensure that `History` can be used outside of the browser.
-    if (typeof window !== 'undefined') {
-      this.location = window.location;
-      this.history = window.history;
-    }
-  };
-
-  // Cached regex for stripping a leading hash/slash and trailing space.
-  var routeStripper = /^[#\/]|\s+$/g;
-
-  // Cached regex for stripping leading and trailing slashes.
-  var rootStripper = /^\/+|\/+$/g;
-
-  // Cached regex for detecting MSIE.
-  var isExplorer = /msie [\w.]+/;
-
-  // Cached regex for removing a trailing slash.
-  var trailingSlash = /\/$/;
-
-  // Cached regex for stripping urls of hash.
-  var pathStripper = /#.*$/;
-
-  // Has the history handling already been started?
-  History.started = false;
-
-  // Set up all inheritable **Backbone.History** properties and methods.
-  _.extend(History.prototype, Events, {
-
-    // The default interval to poll for hash changes, if necessary, is
-    // twenty times a second.
-    interval: 50,
-
-    // Are we at the app root?
-    atRoot: function() {
-      return this.location.pathname.replace(/[^\/]$/, '$&/') === this.root;
-    },
-
-    // Gets the true hash value. Cannot use location.hash directly due to bug
-    // in Firefox where location.hash will always be decoded.
-    getHash: function(window) {
-      var match = (window || this).location.href.match(/#(.*)$/);
-      return match ? match[1] : '';
-    },
-
-    // Get the cross-browser normalized URL fragment, either from the URL,
-    // the hash, or the override.
-    getFragment: function(fragment, forcePushState) {
-      if (fragment == null) {
-        if (this._hasPushState || !this._wantsHashChange || forcePushState) {
-          fragment = decodeURI(this.location.pathname + this.location.search);
-          var root = this.root.replace(trailingSlash, '');
-          if (!fragment.indexOf(root)) fragment = fragment.slice(root.length);
-        } else {
-          fragment = this.getHash();
+    // defined a top-level getter for derived names
+    Object.defineProperty(modelProto, name, {
+        get: function () {
+            return this._getDerivedProperty(name);
+        },
+        set: function () {
+            throw new TypeError('"' + name + '" is a derived property, it can\'t be set directly.');
         }
-      }
-      return fragment.replace(routeStripper, '');
-    },
+    });
+}
 
-    // Start the hash change handling, returning `true` if the current URL matches
-    // an existing route, and `false` otherwise.
-    start: function(options) {
-      if (History.started) throw new Error("Backbone.history has already been started");
-      History.started = true;
-
-      // Figure out the initial configuration. Do we need an iframe?
-      // Is pushState desired ... is it available?
-      this.options          = _.extend({root: '/'}, this.options, options);
-      this.root             = this.options.root;
-      this._wantsHashChange = this.options.hashChange !== false;
-      this._wantsPushState  = !!this.options.pushState;
-      this._hasPushState    = !!(this.options.pushState && this.history && this.history.pushState);
-      var fragment          = this.getFragment();
-      var docMode           = document.documentMode;
-      var oldIE             = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
-
-      // Normalize root to always include a leading and trailing slash.
-      this.root = ('/' + this.root + '/').replace(rootStripper, '/');
-
-      if (oldIE && this._wantsHashChange) {
-        var frame = Backbone.$('<iframe src="javascript:0" tabindex="-1">');
-        this.iframe = frame.hide().appendTo('body')[0].contentWindow;
-        this.navigate(fragment);
-      }
-
-      // Depending on whether we're using pushState or hashes, and whether
-      // 'onhashchange' is supported, determine how we check the URL state.
-      if (this._hasPushState) {
-        Backbone.$(window).on('popstate', this.checkUrl);
-      } else if (this._wantsHashChange && ('onhashchange' in window) && !oldIE) {
-        Backbone.$(window).on('hashchange', this.checkUrl);
-      } else if (this._wantsHashChange) {
-        this._checkUrlInterval = setInterval(this.checkUrl, this.interval);
-      }
-
-      // Determine if we need to change the base url, for a pushState link
-      // opened by a non-pushState browser.
-      this.fragment = fragment;
-      var loc = this.location;
-
-      // Transition from hashChange to pushState or vice versa if both are
-      // requested.
-      if (this._wantsHashChange && this._wantsPushState) {
-
-        // If we've started off with a route from a `pushState`-enabled
-        // browser, but we're currently in a browser that doesn't support it...
-        if (!this._hasPushState && !this.atRoot()) {
-          this.fragment = this.getFragment(null, true);
-          this.location.replace(this.root + '#' + this.fragment);
-          // Return immediately as browser will do redirect to new url
-          return true;
-
-        // Or if we've started out with a hash-based route, but we're currently
-        // in a browser where it could be `pushState`-based instead...
-        } else if (this._hasPushState && this.atRoot() && loc.hash) {
-          this.fragment = this.getHash().replace(routeStripper, '');
-          this.history.replaceState({}, document.title, this.root + this.fragment);
+var dataTypes = {
+    string: {
+        default: function () {
+            return '';
         }
-
-      }
-
-      if (!this.options.silent) return this.loadUrl();
     },
-
-    // Disable Backbone.history, perhaps temporarily. Not useful in a real app,
-    // but possibly useful for unit testing Routers.
-    stop: function() {
-      Backbone.$(window).off('popstate', this.checkUrl).off('hashchange', this.checkUrl);
-      if (this._checkUrlInterval) clearInterval(this._checkUrlInterval);
-      History.started = false;
-    },
-
-    // Add a route to be tested when the fragment changes. Routes added later
-    // may override previous routes.
-    route: function(route, callback) {
-      this.handlers.unshift({route: route, callback: callback});
-    },
-
-    // Checks the current URL to see if it has changed, and if it has,
-    // calls `loadUrl`, normalizing across the hidden iframe.
-    checkUrl: function(e) {
-      var current = this.getFragment();
-      if (current === this.fragment && this.iframe) {
-        current = this.getFragment(this.getHash(this.iframe));
-      }
-      if (current === this.fragment) return false;
-      if (this.iframe) this.navigate(current);
-      this.loadUrl();
-    },
-
-    // Attempt to load the current URL fragment. If a route succeeds with a
-    // match, returns `true`. If no defined routes matches the fragment,
-    // returns `false`.
-    loadUrl: function(fragment) {
-      fragment = this.fragment = this.getFragment(fragment);
-      return _.any(this.handlers, function(handler) {
-        if (handler.route.test(fragment)) {
-          handler.callback(fragment);
-          return true;
+    date: {
+        set: function (newVal) {
+            var newType;
+            if (!_.isDate(newVal)) {
+                try {
+                    newVal = new Date(parseInt(newVal, 10));
+                    if (!_.isDate(newVal)) throw TypeError;
+                    newVal = newVal.valueOf();
+                    if (_.isNaN(newVal)) throw TypeError;
+                    newType = 'date';
+                } catch (e) {
+                    newType = typeof newVal;
+                }
+            } else {
+                newType = 'date';
+                newVal = newVal.valueOf();
+            }
+            return {
+                val: newVal,
+                type: newType
+            };
+        },
+        get: function (val) {
+            return new Date(val);
+        },
+        default: function () {
+            return new Date();
         }
-      });
     },
-
-    // Save a fragment into the hash history, or replace the URL state if the
-    // 'replace' option is passed. You are responsible for properly URL-encoding
-    // the fragment in advance.
-    //
-    // The options object can contain `trigger: true` if you wish to have the
-    // route callback be fired (not usually desirable), or `replace: true`, if
-    // you wish to modify the current URL without adding an entry to the history.
-    navigate: function(fragment, options) {
-      if (!History.started) return false;
-      if (!options || options === true) options = {trigger: !!options};
-
-      var url = this.root + (fragment = this.getFragment(fragment || ''));
-
-      // Strip the hash for matching.
-      fragment = fragment.replace(pathStripper, '');
-
-      if (this.fragment === fragment) return;
-      this.fragment = fragment;
-
-      // Don't include a trailing slash on the root.
-      if (fragment === '' && url !== '/') url = url.slice(0, -1);
-
-      // If pushState is available, we use it to set the fragment as a real URL.
-      if (this._hasPushState) {
-        this.history[options.replace ? 'replaceState' : 'pushState']({}, document.title, url);
-
-      // If hash changes haven't been explicitly disabled, update the hash
-      // fragment to store history.
-      } else if (this._wantsHashChange) {
-        this._updateHash(this.location, fragment, options.replace);
-        if (this.iframe && (fragment !== this.getFragment(this.getHash(this.iframe)))) {
-          // Opening and closing the iframe tricks IE7 and earlier to push a
-          // history entry on hash-tag change.  When replace is true, we don't
-          // want this.
-          if(!options.replace) this.iframe.document.open().close();
-          this._updateHash(this.iframe.location, fragment, options.replace);
+    array: {
+        set: function (newVal) {
+            return {
+                val: newVal,
+                type: _.isArray(newVal) ? 'array' : typeof newVal
+            };
+        },
+        default: function () {
+            return [];
         }
-
-      // If you've told us that you explicitly don't want fallback hashchange-
-      // based history, then `navigate` becomes a page refresh.
-      } else {
-        return this.location.assign(url);
-      }
-      if (options.trigger) return this.loadUrl(fragment);
     },
+    object: {
+        set: function (newVal) {
+            var newType = typeof newVal;
+            // we have to have a way of supporting "missing" objects.
+            // Null is an object, but setting a value to undefined
+            // should work too, IMO. We just override it, in that case.
+            if (newType !== 'object' && _.isUndefined(newVal)) {
+                newVal = null;
+                newType = 'object';
+            }
+            return {
+                val: newVal,
+                type: newType
+            };
+        },
+        default: function () {
+            return {};
+        }
+    },
+    // the `state` data type is a bit special in that setting it should
+    // also bubble events
+    state: {
+        set: function (newVal) {
+            var isInstance = newVal instanceof Base || (newVal && newVal.isState);
+            if (isInstance) {
+                return {
+                    val: newVal,
+                    type: 'state'
+                };
+            } else {
+                return {
+                    val: newVal,
+                    type: typeof newVal
+                };
+            }
+        },
+        compare: function (currentVal, newVal, attributeName) {
+            var isSame = currentVal === newVal;
 
-    // Update the hash location, either replacing the current entry, or adding
-    // a new one to the browser history.
-    _updateHash: function(location, fragment, replace) {
-      if (replace) {
-        var href = location.href.replace(/(javascript:|#).*$/, '');
-        location.replace(href + '#' + fragment);
-      } else {
-        // Some browsers require that `hash` contains a leading #.
-        location.hash = '#' + fragment;
-      }
+            // if this has changed we want to also handle
+            // event propagation
+            if (!isSame) {
+                this.stopListening(currentVal);
+                if (newVal != null) {
+                    this.listenTo(newVal, 'all', this._getEventBubblingHandler(attributeName));
+                }
+            }
+
+            return isSame;
+        }
     }
+};
 
-  });
-
-  // Create the default Backbone.history.
-  Backbone.history = new History;
-
-  // Helpers
-  // -------
-
-  // Helper function to correctly set up the prototype chain, for subclasses.
-  // Similar to `goog.inherits`, but uses a hash of prototype properties and
-  // class properties to be extended.
-  var extend = function(protoProps, staticProps) {
+// the extend method used to extend prototypes, maintain inheritance chains for instanceof
+// and allow for additions to the model definitions.
+function extend(protoProps) {
     var parent = this;
     var child;
+    var args = [].slice.call(arguments);
+    var prop, item;
 
     // The constructor function for the new subclass is either defined by you
     // (the "constructor" property in your `extend` definition), or defaulted
     // by us to simply call the parent's constructor.
-    if (protoProps && _.has(protoProps, 'constructor')) {
-      child = protoProps.constructor;
+    if (protoProps && protoProps.hasOwnProperty('constructor')) {
+        child = protoProps.constructor;
     } else {
-      child = function(){ return parent.apply(this, arguments); };
+        child = function () {
+            return parent.apply(this, arguments);
+        };
     }
 
-    // Add static properties to the constructor function, if supplied.
-    _.extend(child, parent, staticProps);
+    // Add static properties to the constructor function from parent
+    _.extend(child, parent);
 
     // Set the prototype chain to inherit from `parent`, without calling
     // `parent`'s constructor function.
-    var Surrogate = function(){ this.constructor = child; };
+    var Surrogate = function () { this.constructor = child; };
     Surrogate.prototype = parent.prototype;
-    child.prototype = new Surrogate;
+    child.prototype = new Surrogate();
 
-    // Add prototype properties (instance properties) to the subclass,
-    // if supplied.
-    if (protoProps) _.extend(child.prototype, protoProps);
+    // set prototype level objects
+    child.prototype._derived =  _.extend({}, parent.prototype._derived);
+    child.prototype._deps = _.extend({}, parent.prototype._deps);
+    child.prototype._definition = _.extend({}, parent.prototype._definition);
+    child.prototype._collections = _.extend({}, parent.prototype._collections);
+    child.prototype._children = _.extend({}, parent.prototype._children);
+    child.prototype._dataTypes = _.extend({}, parent.prototype._dataTypes || dataTypes);
+
+    // Mix in all prototype properties to the subclass if supplied.
+    if (protoProps) {
+        args.forEach(function processArg(def) {
+            if (def.dataTypes) {
+                _.each(def.dataTypes, function (def, name) {
+                    child.prototype._dataTypes[name] = def;
+                });
+                delete def.dataTypes;
+            }
+            if (def.props) {
+                _.each(def.props, function (def, name) {
+                    createPropertyDefinition(child.prototype, name, def);
+                });
+                delete def.props;
+            }
+            if (def.session) {
+                _.each(def.session, function (def, name) {
+                    createPropertyDefinition(child.prototype, name, def, true);
+                });
+                delete def.session;
+            }
+            if (def.derived) {
+                _.each(def.derived, function (def, name) {
+                    createDerivedProperty(child.prototype, name, def);
+                });
+                delete def.derived;
+            }
+            if (def.collections) {
+                _.each(def.collections, function (constructor, name) {
+                    child.prototype._collections[name] = constructor;
+                });
+                delete def.collections;
+            }
+            if (def.children) {
+                _.each(def.children, function (constructor, name) {
+                    child.prototype._children[name] = constructor;
+                });
+                delete def.children;
+            }
+            _.extend(child.prototype, def);
+        });
+    }
+
+    var toString = Object.prototype.toString;
 
     // Set a convenience property in case the parent's prototype is needed
     // later.
     child.__super__ = parent.prototype;
 
     return child;
-  };
+}
 
-  // Set up inheritance for the model, collection, router, view and history.
-  Model.extend = Collection.extend = Router.extend = View.extend = History.extend = extend;
+Base.extend = extend;
 
-  // Throw an error when a URL is needed, and none is supplied.
-  var urlError = function() {
+// Our main exports
+module.exports = Base;
+
+},{"array-next":11,"backbone-events-standalone":13,"key-tree-store":14,"underscore":28}],11:[function(require,module,exports){
+module.exports = function arrayNext(array, currentItem) {
+    var len = array.length;
+    var newIndex = array.indexOf(currentItem) + 1;
+    if (newIndex > (len - 1)) newIndex = 0;
+    return array[newIndex];
+};
+
+},{}],12:[function(require,module,exports){
+module.exports=require(5)
+},{}],13:[function(require,module,exports){
+module.exports=require(6)
+},{"./backbone-events-standalone":12}],14:[function(require,module,exports){
+function KeyTreeStore() {
+    this.storage = {};
+}
+
+// add an object to the store
+KeyTreeStore.prototype.add = function (keypath, obj) {
+    var arr = this.storage[keypath] || (this.storage[keypath] = []);
+    arr.push(obj);
+};
+
+// remove an object
+KeyTreeStore.prototype.remove = function (obj) {
+    var path, arr;
+    for (path in this.storage) {
+        arr = this.storage[path];
+        arr.some(function (item, index) {
+            if (item === obj) {
+                arr.splice(index, 1);
+                return true;
+            }
+        });
+    }
+};
+
+// grab all relevant objects
+KeyTreeStore.prototype.get = function (keypath) {
+    var res = [];
+    var key;
+
+    for (key in this.storage) {
+        if (keypath === key || key.indexOf(keypath + '.') === 0) {
+            res = res.concat(this.storage[key]);
+        }
+    }
+
+    return res;
+};
+
+module.exports = KeyTreeStore;
+
+},{}],15:[function(require,module,exports){
+var _ = require('underscore');
+var xhr = require('xhr');
+var qs = require('qs');
+
+
+// Throw an error when a URL is needed, and none is supplied.
+var urlError = function () {
     throw new Error('A "url" property or function must be specified');
-  };
+};
 
-  // Wrap an optional error callback with a fallback error event.
-  var wrapError = function(model, options) {
-    var error = options.error;
-    options.error = function(resp) {
-      if (error) error(model, resp, options);
-      model.trigger('error', model, resp, options);
-    };
-  };
 
-  return Backbone;
+module.exports = function (method, model, options) {
+    var type = methodMap[method];
+    var headers = {};
 
-}));
+    // Default options, unless specified.
+    _.defaults(options || (options = {}), {
+        emulateHTTP: false,
+        emulateJSON: false
+    });
 
-},{"underscore":22}],22:[function(require,module,exports){
-module.exports=require(20)
+    // Default request options.
+    var params = {type: type};
+
+    // Ensure that we have a URL.
+    if (!options.url) {
+        params.url = _.result(model, 'url') || urlError();
+    }
+
+    // Ensure that we have the appropriate request data.
+    if (options.data == null && model && (method === 'create' || method === 'update' || method === 'patch')) {
+        params.json = options.attrs || model.toJSON(options);
+    }
+
+    // If passed a data param, we add it to the URL or body depending on request type
+    if (options.data && type === 'GET') {
+        // make sure we've got a '?'
+        params.url += _.contains(params.url, '?') ? '&' : '?';
+        params.url += qs.stringify(options.data);
+    }
+
+    // For older servers, emulate JSON by encoding the request into an HTML-form.
+    if (options.emulateJSON) {
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        params.body = params.json ? {model: params.json} : {};
+        delete params.json;
+    }
+
+    // For older servers, emulate HTTP by mimicking the HTTP method with `_method`
+    // And an `X-HTTP-Method-Override` header.
+    if (options.emulateHTTP && (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
+        params.type = 'POST';
+        if (options.emulateJSON) params.body._method = type;
+        headers['X-HTTP-Method-Override'] = type;
+    }
+
+    // When emulating JSON, we turn the body into a querystring.
+    // We do this later to let the emulateHTTP run its course.
+    if (options.emulateJSON) {
+        params.body = qs.stringify(params.body);
+    }
+
+    // Start setting ajaxConfig options (headers, xhrFields).
+    var ajaxConfig = (_.result(model, 'ajaxConfig') || {});
+
+    // Combine generated headers with user's headers.
+    if (ajaxConfig.headers) {
+        _.extend(headers, ajaxConfig.headers);
+    }
+    params.headers = headers;
+
+    //Set XDR for cross domain in IE8/9
+    if (ajaxConfig.useXDR) {
+        params.useXDR = true;
+    }
+
+    // Set raw xhr options.
+    if (ajaxConfig.xhrFields) {
+        var beforeSend = ajaxConfig.beforeSend;
+        params.beforeSend = function (req) {
+            for (var key in ajaxConfig.xhrFields) {
+                req[key] = ajaxConfig.xhrFields[key];
+            }
+            if (beforeSend) return beforeSend.apply(this, arguments);
+        };
+        params.xhrFields = ajaxConfig.xhrFields;
+    }
+
+    // Turn a jQuery.ajax formatted request into xhr compatible
+    params.method = params.type;
+
+    var ajaxSettings = _.extend(params, options);
+
+    // Make the request. The callback executes functions that are compatible
+    // With jQuery.ajax's syntax.
+    var request = options.xhr = xhr(ajaxSettings, function (err, resp, body) {
+        if (err && options.error) return options.error(resp, 'error', err.message);
+
+        // Parse body as JSON if a string.
+        if (body && typeof body === 'string') {
+            try {
+                body = JSON.parse(body);
+            } catch (e) {}
+        }
+        if (options.success) return options.success(body, 'success', resp);
+    });
+    model.trigger('request', model, request, options, ajaxSettings);
+    request.ajaxSettings = ajaxSettings;
+    return request;
+};
+
+// Map from CRUD to HTTP for our default `Backbone.sync` implementation.
+var methodMap = {
+    'create': 'POST',
+    'update': 'PUT',
+    'patch':  'PATCH',
+    'delete': 'DELETE',
+    'read':   'GET'
+};
+
+},{"qs":16,"underscore":28,"xhr":21}],16:[function(require,module,exports){
+module.exports = require('./lib');
+
+},{"./lib":17}],17:[function(require,module,exports){
+// Load modules
+
+var Stringify = require('./stringify');
+var Parse = require('./parse');
+
+
+// Declare internals
+
+var internals = {};
+
+
+module.exports = {
+    stringify: Stringify,
+    parse: Parse
+};
+
+},{"./parse":18,"./stringify":19}],18:[function(require,module,exports){
+// Load modules
+
+var Utils = require('./utils');
+
+
+// Declare internals
+
+var internals = {
+    delimiter: '&',
+    depth: 5,
+    arrayLimit: 20,
+    parametersLimit: 1000
+};
+
+
+internals.parseValues = function (str, delimiter) {
+
+    delimiter = typeof delimiter === 'string' ? delimiter : internals.delimiter;
+
+    var obj = {};
+    var parts = str.split(delimiter, internals.parametersLimit);
+
+    for (var i = 0, il = parts.length; i < il; ++i) {
+        var part = parts[i];
+        var pos = part.indexOf(']=') === -1 ? part.indexOf('=') : part.indexOf(']=') + 1;
+
+        if (pos === -1) {
+            obj[Utils.decode(part)] = '';
+        }
+        else {
+            var key = Utils.decode(part.slice(0, pos));
+            var val = Utils.decode(part.slice(pos + 1));
+
+            if (!obj[key]) {
+                obj[key] = val;
+            }
+            else {
+                obj[key] = [].concat(obj[key]).concat(val);
+            }
+        }
+    }
+
+    return obj;
+};
+
+
+internals.parseObject = function (chain, val) {
+
+    if (!chain.length) {
+        return val;
+    }
+
+    var root = chain.shift();
+
+    var obj = {};
+    if (root === '[]') {
+        obj = [];
+        obj = obj.concat(internals.parseObject(chain, val));
+    }
+    else {
+        var cleanRoot = root[0] === '[' && root[root.length - 1] === ']' ? root.slice(1, root.length - 1) : root;
+        var index = parseInt(cleanRoot, 10);
+        if (!isNaN(index) &&
+            root !== cleanRoot &&
+            index <= internals.arrayLimit) {
+
+            obj = [];
+            obj[index] = internals.parseObject(chain, val);
+        }
+        else {
+            obj[cleanRoot] = internals.parseObject(chain, val);
+        }
+    }
+
+    return obj;
+};
+
+
+internals.parseKeys = function (key, val, depth) {
+
+    if (!key) {
+        return;
+    }
+
+    // The regex chunks
+
+    var parent = /^([^\[\]]*)/;
+    var child = /(\[[^\[\]]*\])/g;
+
+    // Get the parent
+
+    var segment = parent.exec(key);
+
+    // Don't allow them to overwrite object prototype properties
+
+    if (Object.prototype.hasOwnProperty(segment[1])) {
+        return;
+    }
+
+    // Stash the parent if it exists
+
+    var keys = [];
+    if (segment[1]) {
+        keys.push(segment[1]);
+    }
+
+    // Loop through children appending to the array until we hit depth
+
+    var i = 0;
+    while ((segment = child.exec(key)) !== null && i < depth) {
+
+        ++i;
+        if (!Object.prototype.hasOwnProperty(segment[1].replace(/\[|\]/g, ''))) {
+            keys.push(segment[1]);
+        }
+    }
+
+    // If there's a remainder, just add whatever is left
+
+    if (segment) {
+        keys.push('[' + key.slice(segment.index) + ']');
+    }
+
+    return internals.parseObject(keys, val);
+};
+
+
+module.exports = function (str, depth, delimiter) {
+
+    if (str === '' ||
+        str === null ||
+        typeof str === 'undefined') {
+
+        return {};
+    }
+
+    if (typeof depth !== 'number') {
+        delimiter = depth;
+        depth = internals.depth;
+    }
+
+    var tempObj = typeof str === 'string' ? internals.parseValues(str, delimiter) : Utils.clone(str);
+    var obj = {};
+
+    // Iterate over the keys and setup the new object
+    //
+    for (var key in tempObj) {
+        if (tempObj.hasOwnProperty(key)) {
+            var newObj = internals.parseKeys(key, tempObj[key], depth);
+            obj = Utils.merge(obj, newObj);
+        }
+    }
+
+    return Utils.compact(obj);
+};
+
+},{"./utils":20}],19:[function(require,module,exports){
+(function (Buffer){
+// Load modules
+
+
+// Declare internals
+
+var internals = {
+    delimiter: '&'
+};
+
+
+internals.stringify = function (obj, prefix) {
+
+    if (Buffer.isBuffer(obj)) {
+        obj = obj.toString();
+    }
+    else if (obj instanceof Date) {
+        obj = obj.toISOString();
+    }
+    else if (obj === null) {
+        obj = '';
+    }
+
+    if (typeof obj === 'string' ||
+        typeof obj === 'number' ||
+        typeof obj === 'boolean') {
+
+        return [encodeURIComponent(prefix) + '=' + encodeURIComponent(obj)];
+    }
+
+    var values = [];
+
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            values = values.concat(internals.stringify(obj[key], prefix + '[' + key + ']'));
+        }
+    }
+
+    return values;
+};
+
+
+module.exports = function (obj, delimiter) {
+
+    delimiter = typeof delimiter === 'undefined' ? internals.delimiter : delimiter;
+
+    var keys = [];
+
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            keys = keys.concat(internals.stringify(obj[key], key));
+        }
+    }
+
+    return keys.join(delimiter);
+};
+
+}).call(this,require("buffer").Buffer)
+},{"buffer":32}],20:[function(require,module,exports){
+(function (Buffer){
+// Load modules
+
+
+// Declare internals
+
+var internals = {};
+
+
+exports.arrayToObject = function (source) {
+
+    var obj = {};
+    for (var i = 0, il = source.length; i < il; ++i) {
+        if (typeof source[i] !== 'undefined') {
+
+            obj[i] = source[i];
+        }
+    }
+
+    return obj;
+};
+
+
+exports.clone = function (source) {
+
+    if (typeof source !== 'object' ||
+        source === null) {
+
+        return source;
+    }
+
+    if (Buffer.isBuffer(source)) {
+        return source.toString();
+    }
+
+    var obj = Array.isArray(source) ? [] : {};
+    for (var i in source) {
+        if (source.hasOwnProperty(i)) {
+            obj[i] = exports.clone(source[i]);
+        }
+    }
+
+    return obj;
+};
+
+
+exports.merge = function (target, source) {
+
+    if (!source) {
+        return target;
+    }
+
+    var obj = exports.clone(target);
+
+    if (Array.isArray(source)) {
+        for (var i = 0, il = source.length; i < il; ++i) {
+            if (typeof source[i] !== 'undefined') {
+                if (typeof obj[i] === 'object') {
+                    obj[i] = exports.merge(obj[i], source[i]);
+                }
+                else {
+                    obj[i] = source[i];
+                }
+            }
+        }
+
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        obj = exports.arrayToObject(obj);
+    }
+
+    var keys = Object.keys(source);
+    for (var k = 0, kl = keys.length; k < kl; ++k) {
+        var key = keys[k];
+        var value = source[key];
+
+        if (value &&
+            typeof value === 'object') {
+
+            if (!obj[key]) {
+                obj[key] = exports.clone(value);
+            }
+            else {
+                obj[key] = exports.merge(obj[key], value);
+            }
+        }
+        else {
+            obj[key] = value;
+        }
+    }
+
+    return obj;
+};
+
+
+exports.decode = function (str) {
+
+    try {
+        return decodeURIComponent(str.replace(/\+/g, ' '));
+    } catch (e) {
+        return str;
+    }
+};
+
+
+exports.compact = function (obj) {
+
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+
+    var compacted = {};
+
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            if (Array.isArray(obj[key])) {
+                compacted[key] = [];
+
+                for (var i = 0, l = obj[key].length; i < l; i++) {
+                    if (typeof obj[key][i] !== 'undefined') {
+                        compacted[key].push(obj[key][i]);
+                    }
+                }
+            }
+            else {
+                compacted[key] = exports.compact(obj[key]);
+            }
+        }
+    }
+
+    return compacted;
+};
+
+}).call(this,require("buffer").Buffer)
+},{"buffer":32}],21:[function(require,module,exports){
+var window = require("global/window")
+var once = require("once")
+var parseHeaders = require('parse-headers')
+
+var messages = {
+    "0": "Internal XMLHttpRequest Error",
+    "4": "4xx Client Error",
+    "5": "5xx Server Error"
+}
+
+var XHR = window.XMLHttpRequest || noop
+var XDR = "withCredentials" in (new XHR()) ? XHR : window.XDomainRequest
+
+module.exports = createXHR
+
+function createXHR(options, callback) {
+    if (typeof options === "string") {
+        options = { uri: options }
+    }
+
+    options = options || {}
+    callback = once(callback)
+
+    var xhr = options.xhr || null
+
+    if (!xhr) {
+        if (options.cors || options.useXDR) {
+            xhr = new XDR()
+        }else{
+            xhr = new XHR()
+        }
+    }
+
+    var uri = xhr.url = options.uri || options.url;
+    var method = xhr.method = options.method || "GET"
+    var body = options.body || options.data
+    var headers = xhr.headers = options.headers || {}
+    var sync = !!options.sync
+    var isJson = false
+    var key
+    var load = options.response ? loadResponse : loadXhr
+
+    if ("json" in options) {
+        isJson = true
+        headers["Accept"] = "application/json"
+        if (method !== "GET" && method !== "HEAD") {
+            headers["Content-Type"] = "application/json"
+            body = JSON.stringify(options.json)
+        }
+    }
+
+    xhr.onreadystatechange = readystatechange
+    xhr.onload = load
+    xhr.onerror = error
+    // IE9 must have onprogress be set to a unique function.
+    xhr.onprogress = function () {
+        // IE must die
+    }
+    // hate IE
+    xhr.ontimeout = noop
+    xhr.open(method, uri, !sync)
+                                    //backward compatibility
+    if (options.withCredentials || (options.cors && options.withCredentials !== false)) {
+        xhr.withCredentials = true
+    }
+
+    // Cannot set timeout with sync request
+    if (!sync) {
+        xhr.timeout = "timeout" in options ? options.timeout : 5000
+    }
+
+    if (xhr.setRequestHeader) {
+        for(key in headers){
+            if(headers.hasOwnProperty(key)){
+                xhr.setRequestHeader(key, headers[key])
+            }
+        }
+    } else if (options.headers) {
+        throw new Error("Headers cannot be set on an XDomainRequest object");
+    }
+
+    if ("responseType" in options) {
+        xhr.responseType = options.responseType
+    }
+    
+    if ("beforeSend" in options && 
+        typeof options.beforeSend === "function"
+    ) {
+        options.beforeSend(xhr)
+    }
+
+    xhr.send(body)
+
+    return xhr
+
+    function readystatechange() {
+        if (xhr.readyState === 4) {
+            load()
+        }
+    }
+
+    function getBody() {
+        // Chrome with requestType=blob throws errors arround when even testing access to responseText
+        var body = null
+
+        if (xhr.response) {
+            body = xhr.response
+        } else if (xhr.responseType === 'text' || !xhr.responseType) {
+            body = xhr.responseText || xhr.responseXML
+        }
+
+        if (isJson) {
+            try {
+                body = JSON.parse(body)
+            } catch (e) {}
+        }
+
+        return body
+    }
+
+    function getStatusCode() {
+        return xhr.status === 1223 ? 204 : xhr.status
+    }
+
+    // if we're getting a none-ok statusCode, build & return an error
+    function errorFromStatusCode(status) {
+        var error = null
+        if (status === 0 || (status >= 400 && status < 600)) {
+            var message = (typeof body === "string" ? body : false) ||
+                messages[String(status).charAt(0)]
+            error = new Error(message)
+            error.statusCode = status
+        };
+
+        return error;
+    }
+
+    // will load the data & process the response in a special response object
+    function loadResponse() {
+        var status = getStatusCode();
+        var error = errorFromStatusCode(status);
+        var response = {
+            body: getBody(),
+            statusCode: status,
+            statusText: xhr.statusText,
+            headers: parseHeaders(xhr.getAllResponseHeaders())
+        };
+
+        callback(error, response, response.body);
+    }
+
+    // will load the data and add some response properties to the source xhr
+    // and then respond with that
+    function loadXhr() {
+        var status = getStatusCode()
+        var error = errorFromStatusCode(status)
+
+        xhr.status = xhr.statusCode = status;
+        xhr.body = getBody();
+
+        callback(error, xhr, xhr.body);
+    }
+
+    function error(evt) {
+        callback(evt, xhr)
+    }
+}
+
+
+function noop() {}
+
+},{"global/window":22,"once":23,"parse-headers":27}],22:[function(require,module,exports){
+(function (global){
+if (typeof window !== "undefined") {
+    module.exports = window
+} else if (typeof global !== "undefined") {
+    module.exports = global
+} else {
+    module.exports = {}
+}
+
+}).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],23:[function(require,module,exports){
+module.exports = once
+
+once.proto = once(function () {
+  Object.defineProperty(Function.prototype, 'once', {
+    value: function () {
+      return once(this)
+    },
+    configurable: true
+  })
+})
+
+function once (fn) {
+  var called = false
+  return function () {
+    if (called) return
+    called = true
+    return fn.apply(this, arguments)
+  }
+}
+
+},{}],24:[function(require,module,exports){
+var isFunction = require('is-function')
+
+module.exports = forEach
+
+var toString = Object.prototype.toString
+var hasOwnProperty = Object.prototype.hasOwnProperty
+
+function forEach(list, iterator, context) {
+    if (!isFunction(iterator)) {
+        throw new TypeError('iterator must be a function')
+    }
+
+    if (arguments.length < 3) {
+        context = this
+    }
+    
+    if (toString.call(list) === '[object Array]')
+        forEachArray(list, iterator, context)
+    else if (typeof list === 'string')
+        forEachString(list, iterator, context)
+    else
+        forEachObject(list, iterator, context)
+}
+
+function forEachArray(array, iterator, context) {
+    for (var i = 0, len = array.length; i < len; i++) {
+        if (hasOwnProperty.call(array, i)) {
+            iterator.call(context, array[i], i, array)
+        }
+    }
+}
+
+function forEachString(string, iterator, context) {
+    for (var i = 0, len = string.length; i < len; i++) {
+        // no such thing as a sparse string.
+        iterator.call(context, string.charAt(i), i, string)
+    }
+}
+
+function forEachObject(object, iterator, context) {
+    for (var k in object) {
+        if (hasOwnProperty.call(object, k)) {
+            iterator.call(context, object[k], k, object)
+        }
+    }
+}
+
+},{"is-function":25}],25:[function(require,module,exports){
+module.exports = isFunction
+
+var toString = Object.prototype.toString
+
+function isFunction (fn) {
+  var string = toString.call(fn)
+  return string === '[object Function]' ||
+    (typeof fn === 'function' && string !== '[object RegExp]') ||
+    (typeof window !== 'undefined' &&
+     // IE8 and below
+     (fn === window.setTimeout ||
+      fn === window.alert ||
+      fn === window.confirm ||
+      fn === window.prompt))
+};
+
+},{}],26:[function(require,module,exports){
+
+exports = module.exports = trim;
+
+function trim(str){
+  return str.replace(/^\s*|\s*$/g, '');
+}
+
+exports.left = function(str){
+  return str.replace(/^\s*/, '');
+};
+
+exports.right = function(str){
+  return str.replace(/\s*$/, '');
+};
+
+},{}],27:[function(require,module,exports){
+var trim = require('trim')
+  , forEach = require('for-each')
+
+module.exports = function (headers) {
+  if (!headers)
+    return {}
+
+  var result = {}
+
+  forEach(
+      trim(headers).split('\n')
+    , function (row) {
+        var index = row.indexOf(':')
+
+        result[trim(row.slice(0, index)).toLowerCase()] =
+          trim(row.slice(index + 1))
+      }
+  )
+
+  return result
+}
+},{"for-each":24,"trim":26}],28:[function(require,module,exports){
+module.exports=require(2)
+},{}],29:[function(require,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
 // THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -5338,14 +4247,14 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":25}],24:[function(require,module,exports){
+},{"util/":31}],30:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],25:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5935,7 +4844,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require("n7q+al"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":24,"inherits":29,"n7q+al":30}],26:[function(require,module,exports){
+},{"./support/isBuffer":30,"inherits":35,"n7q+al":36}],32:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -7106,7 +6015,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":27,"ieee754":28}],27:[function(require,module,exports){
+},{"base64-js":33,"ieee754":34}],33:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -7228,7 +6137,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],28:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -7314,7 +6223,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],29:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7339,7 +6248,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],30:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -7404,7 +6313,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],31:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 
 ;(function(){
 
@@ -7850,7 +6759,7 @@ process.chdir = function (dir) {
 
 })();
 
-},{}],32:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -7884,7 +6793,7 @@ var AutoFocusMixin = {
 
 module.exports = AutoFocusMixin;
 
-},{"./focusNode":131}],33:[function(require,module,exports){
+},{"./focusNode":137}],39:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8007,7 +6916,7 @@ var CSSProperty = {
 
 module.exports = CSSProperty;
 
-},{}],34:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8106,7 +7015,7 @@ var CSSPropertyOperations = {
 
 module.exports = CSSPropertyOperations;
 
-},{"./CSSProperty":33,"./dangerousStyleValue":126,"./escapeTextForBrowser":129,"./hyphenate":141,"./memoizeStringOnly":151}],35:[function(require,module,exports){
+},{"./CSSProperty":39,"./dangerousStyleValue":132,"./escapeTextForBrowser":135,"./hyphenate":147,"./memoizeStringOnly":157}],41:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8495,7 +7404,7 @@ var ChangeEventPlugin = {
 
 module.exports = ChangeEventPlugin;
 
-},{"./EventConstants":45,"./EventPluginHub":47,"./EventPropagators":50,"./ExecutionEnvironment":51,"./ReactUpdates":102,"./SyntheticEvent":109,"./isEventSupported":144,"./isTextInputElement":146,"./keyOf":150}],36:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPluginHub":53,"./EventPropagators":56,"./ExecutionEnvironment":57,"./ReactUpdates":108,"./SyntheticEvent":115,"./isEventSupported":150,"./isTextInputElement":152,"./keyOf":156}],42:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8527,7 +7436,7 @@ var ClientReactRootIndex = {
 
 module.exports = ClientReactRootIndex;
 
-},{}],37:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8789,7 +7698,7 @@ var CompositionEventPlugin = {
 
 module.exports = CompositionEventPlugin;
 
-},{"./EventConstants":45,"./EventPropagators":50,"./ExecutionEnvironment":51,"./ReactInputSelection":83,"./SyntheticCompositionEvent":107,"./getTextContentAccessor":139,"./keyOf":150}],38:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPropagators":56,"./ExecutionEnvironment":57,"./ReactInputSelection":89,"./SyntheticCompositionEvent":113,"./getTextContentAccessor":145,"./keyOf":156}],44:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -8962,7 +7871,7 @@ var DOMChildrenOperations = {
 
 module.exports = DOMChildrenOperations;
 
-},{"./Danger":41,"./ReactMultiChildUpdateTypes":89,"./getTextContentAccessor":139}],39:[function(require,module,exports){
+},{"./Danger":47,"./ReactMultiChildUpdateTypes":95,"./getTextContentAccessor":145}],45:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -9236,7 +8145,7 @@ var DOMProperty = {
 module.exports = DOMProperty;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],40:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],46:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -9421,7 +8330,7 @@ var DOMPropertyOperations = {
 module.exports = DOMPropertyOperations;
 
 }).call(this,require("n7q+al"))
-},{"./DOMProperty":39,"./escapeTextForBrowser":129,"./memoizeStringOnly":151,"./warning":165,"n7q+al":30}],41:[function(require,module,exports){
+},{"./DOMProperty":45,"./escapeTextForBrowser":135,"./memoizeStringOnly":157,"./warning":171,"n7q+al":36}],47:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -9612,7 +8521,7 @@ var Danger = {
 module.exports = Danger;
 
 }).call(this,require("n7q+al"))
-},{"./ExecutionEnvironment":51,"./createNodesFromMarkup":124,"./emptyFunction":127,"./getMarkupWrap":136,"./invariant":143,"n7q+al":30}],42:[function(require,module,exports){
+},{"./ExecutionEnvironment":57,"./createNodesFromMarkup":130,"./emptyFunction":133,"./getMarkupWrap":142,"./invariant":149,"n7q+al":36}],48:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -9810,7 +8719,7 @@ var DefaultDOMPropertyConfig = {
 
 module.exports = DefaultDOMPropertyConfig;
 
-},{"./DOMProperty":39}],43:[function(require,module,exports){
+},{"./DOMProperty":45}],49:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -9856,7 +8765,7 @@ var DefaultEventPluginOrder = [
 
 module.exports = DefaultEventPluginOrder;
 
-},{"./keyOf":150}],44:[function(require,module,exports){
+},{"./keyOf":156}],50:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -10003,7 +8912,7 @@ var EnterLeaveEventPlugin = {
 
 module.exports = EnterLeaveEventPlugin;
 
-},{"./EventConstants":45,"./EventPropagators":50,"./ReactMount":86,"./SyntheticMouseEvent":112,"./keyOf":150}],45:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPropagators":56,"./ReactMount":92,"./SyntheticMouseEvent":118,"./keyOf":156}],51:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -10081,7 +8990,7 @@ var EventConstants = {
 
 module.exports = EventConstants;
 
-},{"./keyMirror":149}],46:[function(require,module,exports){
+},{"./keyMirror":155}],52:[function(require,module,exports){
 (function (process){
 /**
  * @providesModule EventListener
@@ -10154,7 +9063,7 @@ var EventListener = {
 module.exports = EventListener;
 
 }).call(this,require("n7q+al"))
-},{"./emptyFunction":127,"n7q+al":30}],47:[function(require,module,exports){
+},{"./emptyFunction":133,"n7q+al":36}],53:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -10453,7 +9362,7 @@ var EventPluginHub = {
 module.exports = EventPluginHub;
 
 }).call(this,require("n7q+al"))
-},{"./EventPluginRegistry":48,"./EventPluginUtils":49,"./ExecutionEnvironment":51,"./accumulate":118,"./forEachAccumulated":132,"./invariant":143,"./isEventSupported":144,"./monitorCodeUse":156,"n7q+al":30}],48:[function(require,module,exports){
+},{"./EventPluginRegistry":54,"./EventPluginUtils":55,"./ExecutionEnvironment":57,"./accumulate":124,"./forEachAccumulated":138,"./invariant":149,"./isEventSupported":150,"./monitorCodeUse":162,"n7q+al":36}],54:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -10738,7 +9647,7 @@ var EventPluginRegistry = {
 module.exports = EventPluginRegistry;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],49:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],55:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -10956,7 +9865,7 @@ var EventPluginUtils = {
 module.exports = EventPluginUtils;
 
 }).call(this,require("n7q+al"))
-},{"./EventConstants":45,"./invariant":143,"n7q+al":30}],50:[function(require,module,exports){
+},{"./EventConstants":51,"./invariant":149,"n7q+al":36}],56:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11103,7 +10012,7 @@ var EventPropagators = {
 module.exports = EventPropagators;
 
 }).call(this,require("n7q+al"))
-},{"./EventConstants":45,"./EventPluginHub":47,"./accumulate":118,"./forEachAccumulated":132,"n7q+al":30}],51:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPluginHub":53,"./accumulate":124,"./forEachAccumulated":138,"n7q+al":36}],57:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -11149,7 +10058,7 @@ var ExecutionEnvironment = {
 
 module.exports = ExecutionEnvironment;
 
-},{}],52:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11313,7 +10222,7 @@ var LinkedValueUtils = {
 module.exports = LinkedValueUtils;
 
 }).call(this,require("n7q+al"))
-},{"./ReactPropTypes":95,"./invariant":143,"./warning":165,"n7q+al":30}],53:[function(require,module,exports){
+},{"./ReactPropTypes":101,"./invariant":149,"./warning":171,"n7q+al":36}],59:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -11378,7 +10287,7 @@ var MobileSafariClickEventPlugin = {
 
 module.exports = MobileSafariClickEventPlugin;
 
-},{"./EventConstants":45,"./emptyFunction":127}],54:[function(require,module,exports){
+},{"./EventConstants":51,"./emptyFunction":133}],60:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11501,7 +10410,7 @@ var PooledClass = {
 module.exports = PooledClass;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],55:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],61:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11602,7 +10511,7 @@ React.version = '0.10.0';
 module.exports = React;
 
 }).call(this,require("n7q+al"))
-},{"./DOMPropertyOperations":40,"./EventPluginUtils":49,"./ExecutionEnvironment":51,"./ReactChildren":57,"./ReactComponent":58,"./ReactCompositeComponent":60,"./ReactContext":61,"./ReactCurrentOwner":62,"./ReactDOM":63,"./ReactDOMComponent":65,"./ReactDefaultInjection":75,"./ReactInstanceHandles":84,"./ReactMount":86,"./ReactMultiChild":88,"./ReactPerf":91,"./ReactPropTypes":95,"./ReactServerRendering":99,"./ReactTextComponent":101,"./onlyChild":159,"n7q+al":30}],56:[function(require,module,exports){
+},{"./DOMPropertyOperations":46,"./EventPluginUtils":55,"./ExecutionEnvironment":57,"./ReactChildren":63,"./ReactComponent":64,"./ReactCompositeComponent":66,"./ReactContext":67,"./ReactCurrentOwner":68,"./ReactDOM":69,"./ReactDOMComponent":71,"./ReactDefaultInjection":81,"./ReactInstanceHandles":90,"./ReactMount":92,"./ReactMultiChild":94,"./ReactPerf":97,"./ReactPropTypes":101,"./ReactServerRendering":105,"./ReactTextComponent":107,"./onlyChild":165,"n7q+al":36}],62:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11648,7 +10557,7 @@ var ReactBrowserComponentMixin = {
 module.exports = ReactBrowserComponentMixin;
 
 }).call(this,require("n7q+al"))
-},{"./ReactMount":86,"./invariant":143,"n7q+al":30}],57:[function(require,module,exports){
+},{"./ReactMount":92,"./invariant":149,"n7q+al":36}],63:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -11784,7 +10693,7 @@ var ReactChildren = {
 module.exports = ReactChildren;
 
 }).call(this,require("n7q+al"))
-},{"./PooledClass":54,"./invariant":143,"./traverseAllChildren":164,"n7q+al":30}],58:[function(require,module,exports){
+},{"./PooledClass":60,"./invariant":149,"./traverseAllChildren":170,"n7q+al":36}],64:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -12383,7 +11292,7 @@ var ReactComponent = {
 module.exports = ReactComponent;
 
 }).call(this,require("n7q+al"))
-},{"./ReactCurrentOwner":62,"./ReactOwner":90,"./ReactUpdates":102,"./invariant":143,"./keyMirror":149,"./merge":152,"./monitorCodeUse":156,"n7q+al":30}],59:[function(require,module,exports){
+},{"./ReactCurrentOwner":68,"./ReactOwner":96,"./ReactUpdates":108,"./invariant":149,"./keyMirror":155,"./merge":158,"./monitorCodeUse":162,"n7q+al":36}],65:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -12511,7 +11420,7 @@ var ReactComponentBrowserEnvironment = {
 module.exports = ReactComponentBrowserEnvironment;
 
 }).call(this,require("n7q+al"))
-},{"./ReactDOMIDOperations":67,"./ReactMarkupChecksum":85,"./ReactMount":86,"./ReactPerf":91,"./ReactReconcileTransaction":97,"./getReactRootElementInContainer":138,"./invariant":143,"n7q+al":30}],60:[function(require,module,exports){
+},{"./ReactDOMIDOperations":73,"./ReactMarkupChecksum":91,"./ReactMount":92,"./ReactPerf":97,"./ReactReconcileTransaction":103,"./getReactRootElementInContainer":144,"./invariant":149,"n7q+al":36}],66:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -14102,7 +13011,7 @@ var ReactCompositeComponent = {
 module.exports = ReactCompositeComponent;
 
 }).call(this,require("n7q+al"))
-},{"./ReactComponent":58,"./ReactContext":61,"./ReactCurrentOwner":62,"./ReactErrorUtils":78,"./ReactOwner":90,"./ReactPerf":91,"./ReactPropTransferer":92,"./ReactPropTypeLocationNames":93,"./ReactPropTypeLocations":94,"./ReactUpdates":102,"./instantiateReactComponent":142,"./invariant":143,"./keyMirror":149,"./merge":152,"./mixInto":155,"./monitorCodeUse":156,"./objMap":157,"./shouldUpdateReactComponent":162,"./warning":165,"n7q+al":30}],61:[function(require,module,exports){
+},{"./ReactComponent":64,"./ReactContext":67,"./ReactCurrentOwner":68,"./ReactErrorUtils":84,"./ReactOwner":96,"./ReactPerf":97,"./ReactPropTransferer":98,"./ReactPropTypeLocationNames":99,"./ReactPropTypeLocations":100,"./ReactUpdates":108,"./instantiateReactComponent":148,"./invariant":149,"./keyMirror":155,"./merge":158,"./mixInto":161,"./monitorCodeUse":162,"./objMap":163,"./shouldUpdateReactComponent":168,"./warning":171,"n7q+al":36}],67:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -14171,7 +13080,7 @@ var ReactContext = {
 
 module.exports = ReactContext;
 
-},{"./merge":152}],62:[function(require,module,exports){
+},{"./merge":158}],68:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -14212,7 +13121,7 @@ var ReactCurrentOwner = {
 
 module.exports = ReactCurrentOwner;
 
-},{}],63:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -14421,7 +13330,7 @@ ReactDOM.injection = injection;
 
 module.exports = ReactDOM;
 
-},{"./ReactDOMComponent":65,"./mergeInto":154,"./objMapKeyVal":158}],64:[function(require,module,exports){
+},{"./ReactDOMComponent":71,"./mergeInto":160,"./objMapKeyVal":164}],70:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -14492,7 +13401,7 @@ var ReactDOMButton = ReactCompositeComponent.createClass({
 
 module.exports = ReactDOMButton;
 
-},{"./AutoFocusMixin":32,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./keyMirror":149}],65:[function(require,module,exports){
+},{"./AutoFocusMixin":38,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./keyMirror":155}],71:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -14912,7 +13821,7 @@ mixInto(ReactDOMComponent, ReactBrowserComponentMixin);
 module.exports = ReactDOMComponent;
 
 }).call(this,require("n7q+al"))
-},{"./CSSPropertyOperations":34,"./DOMProperty":39,"./DOMPropertyOperations":40,"./ReactBrowserComponentMixin":56,"./ReactComponent":58,"./ReactEventEmitter":79,"./ReactMount":86,"./ReactMultiChild":88,"./ReactPerf":91,"./escapeTextForBrowser":129,"./invariant":143,"./keyOf":150,"./merge":152,"./mixInto":155,"n7q+al":30}],66:[function(require,module,exports){
+},{"./CSSPropertyOperations":40,"./DOMProperty":45,"./DOMPropertyOperations":46,"./ReactBrowserComponentMixin":62,"./ReactComponent":64,"./ReactEventEmitter":85,"./ReactMount":92,"./ReactMultiChild":94,"./ReactPerf":97,"./escapeTextForBrowser":135,"./invariant":149,"./keyOf":156,"./merge":158,"./mixInto":161,"n7q+al":36}],72:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -14976,7 +13885,7 @@ var ReactDOMForm = ReactCompositeComponent.createClass({
 
 module.exports = ReactDOMForm;
 
-},{"./EventConstants":45,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./ReactEventEmitter":79}],67:[function(require,module,exports){
+},{"./EventConstants":51,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./ReactEventEmitter":85}],73:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -15198,7 +14107,7 @@ var ReactDOMIDOperations = {
 module.exports = ReactDOMIDOperations;
 
 }).call(this,require("n7q+al"))
-},{"./CSSPropertyOperations":34,"./DOMChildrenOperations":38,"./DOMPropertyOperations":40,"./ReactMount":86,"./ReactPerf":91,"./invariant":143,"n7q+al":30}],68:[function(require,module,exports){
+},{"./CSSPropertyOperations":40,"./DOMChildrenOperations":44,"./DOMPropertyOperations":46,"./ReactMount":92,"./ReactPerf":97,"./invariant":149,"n7q+al":36}],74:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -15261,7 +14170,7 @@ var ReactDOMImg = ReactCompositeComponent.createClass({
 
 module.exports = ReactDOMImg;
 
-},{"./EventConstants":45,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./ReactEventEmitter":79}],69:[function(require,module,exports){
+},{"./EventConstants":51,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./ReactEventEmitter":85}],75:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -15447,7 +14356,7 @@ var ReactDOMInput = ReactCompositeComponent.createClass({
 module.exports = ReactDOMInput;
 
 }).call(this,require("n7q+al"))
-},{"./AutoFocusMixin":32,"./DOMPropertyOperations":40,"./LinkedValueUtils":52,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./ReactMount":86,"./invariant":143,"./merge":152,"n7q+al":30}],70:[function(require,module,exports){
+},{"./AutoFocusMixin":38,"./DOMPropertyOperations":46,"./LinkedValueUtils":58,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./ReactMount":92,"./invariant":149,"./merge":158,"n7q+al":36}],76:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -15506,7 +14415,7 @@ var ReactDOMOption = ReactCompositeComponent.createClass({
 module.exports = ReactDOMOption;
 
 }).call(this,require("n7q+al"))
-},{"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./warning":165,"n7q+al":30}],71:[function(require,module,exports){
+},{"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./warning":171,"n7q+al":36}],77:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -15690,7 +14599,7 @@ var ReactDOMSelect = ReactCompositeComponent.createClass({
 module.exports = ReactDOMSelect;
 
 }).call(this,require("n7q+al"))
-},{"./AutoFocusMixin":32,"./LinkedValueUtils":52,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./invariant":143,"./merge":152,"n7q+al":30}],72:[function(require,module,exports){
+},{"./AutoFocusMixin":38,"./LinkedValueUtils":58,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./invariant":149,"./merge":158,"n7q+al":36}],78:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -15881,7 +14790,7 @@ var ReactDOMSelection = {
 
 module.exports = ReactDOMSelection;
 
-},{"./getNodeForCharacterOffset":137,"./getTextContentAccessor":139}],73:[function(require,module,exports){
+},{"./getNodeForCharacterOffset":143,"./getTextContentAccessor":145}],79:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -16029,7 +14938,7 @@ var ReactDOMTextarea = ReactCompositeComponent.createClass({
 module.exports = ReactDOMTextarea;
 
 }).call(this,require("n7q+al"))
-},{"./AutoFocusMixin":32,"./DOMPropertyOperations":40,"./LinkedValueUtils":52,"./ReactBrowserComponentMixin":56,"./ReactCompositeComponent":60,"./ReactDOM":63,"./invariant":143,"./merge":152,"./warning":165,"n7q+al":30}],74:[function(require,module,exports){
+},{"./AutoFocusMixin":38,"./DOMPropertyOperations":46,"./LinkedValueUtils":58,"./ReactBrowserComponentMixin":62,"./ReactCompositeComponent":66,"./ReactDOM":69,"./invariant":149,"./merge":158,"./warning":171,"n7q+al":36}],80:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -16106,7 +15015,7 @@ var ReactDefaultBatchingStrategy = {
 
 module.exports = ReactDefaultBatchingStrategy;
 
-},{"./ReactUpdates":102,"./Transaction":116,"./emptyFunction":127,"./mixInto":155}],75:[function(require,module,exports){
+},{"./ReactUpdates":108,"./Transaction":122,"./emptyFunction":133,"./mixInto":161}],81:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -16235,7 +15144,7 @@ module.exports = {
 };
 
 }).call(this,require("n7q+al"))
-},{"./ChangeEventPlugin":35,"./ClientReactRootIndex":36,"./CompositionEventPlugin":37,"./DefaultDOMPropertyConfig":42,"./DefaultEventPluginOrder":43,"./EnterLeaveEventPlugin":44,"./ExecutionEnvironment":51,"./MobileSafariClickEventPlugin":53,"./ReactBrowserComponentMixin":56,"./ReactComponentBrowserEnvironment":59,"./ReactDOM":63,"./ReactDOMButton":64,"./ReactDOMForm":66,"./ReactDOMImg":68,"./ReactDOMInput":69,"./ReactDOMOption":70,"./ReactDOMSelect":71,"./ReactDOMTextarea":73,"./ReactDefaultBatchingStrategy":74,"./ReactDefaultPerf":76,"./ReactEventTopLevelCallback":81,"./ReactInjection":82,"./ReactInstanceHandles":84,"./ReactMount":86,"./SelectEventPlugin":103,"./ServerReactRootIndex":104,"./SimpleEventPlugin":105,"./createFullPageComponent":123,"n7q+al":30}],76:[function(require,module,exports){
+},{"./ChangeEventPlugin":41,"./ClientReactRootIndex":42,"./CompositionEventPlugin":43,"./DefaultDOMPropertyConfig":48,"./DefaultEventPluginOrder":49,"./EnterLeaveEventPlugin":50,"./ExecutionEnvironment":57,"./MobileSafariClickEventPlugin":59,"./ReactBrowserComponentMixin":62,"./ReactComponentBrowserEnvironment":65,"./ReactDOM":69,"./ReactDOMButton":70,"./ReactDOMForm":72,"./ReactDOMImg":74,"./ReactDOMInput":75,"./ReactDOMOption":76,"./ReactDOMSelect":77,"./ReactDOMTextarea":79,"./ReactDefaultBatchingStrategy":80,"./ReactDefaultPerf":82,"./ReactEventTopLevelCallback":87,"./ReactInjection":88,"./ReactInstanceHandles":90,"./ReactMount":92,"./SelectEventPlugin":109,"./ServerReactRootIndex":110,"./SimpleEventPlugin":111,"./createFullPageComponent":129,"n7q+al":36}],82:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -16481,7 +15390,7 @@ var ReactDefaultPerf = {
 
 module.exports = ReactDefaultPerf;
 
-},{"./DOMProperty":39,"./ReactDefaultPerfAnalysis":77,"./ReactMount":86,"./ReactPerf":91,"./performanceNow":160}],77:[function(require,module,exports){
+},{"./DOMProperty":45,"./ReactDefaultPerfAnalysis":83,"./ReactMount":92,"./ReactPerf":97,"./performanceNow":166}],83:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -16682,7 +15591,7 @@ var ReactDefaultPerfAnalysis = {
 
 module.exports = ReactDefaultPerfAnalysis;
 
-},{"./merge":152}],78:[function(require,module,exports){
+},{"./merge":158}],84:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -16721,7 +15630,7 @@ var ReactErrorUtils = {
 
 module.exports = ReactErrorUtils;
 
-},{}],79:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -17064,7 +15973,7 @@ var ReactEventEmitter = merge(ReactEventEmitterMixin, {
 module.exports = ReactEventEmitter;
 
 }).call(this,require("n7q+al"))
-},{"./EventConstants":45,"./EventListener":46,"./EventPluginHub":47,"./EventPluginRegistry":48,"./ExecutionEnvironment":51,"./ReactEventEmitterMixin":80,"./ViewportMetrics":117,"./invariant":143,"./isEventSupported":144,"./merge":152,"n7q+al":30}],80:[function(require,module,exports){
+},{"./EventConstants":51,"./EventListener":52,"./EventPluginHub":53,"./EventPluginRegistry":54,"./ExecutionEnvironment":57,"./ReactEventEmitterMixin":86,"./ViewportMetrics":123,"./invariant":149,"./isEventSupported":150,"./merge":158,"n7q+al":36}],86:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -17123,7 +16032,7 @@ var ReactEventEmitterMixin = {
 
 module.exports = ReactEventEmitterMixin;
 
-},{"./EventPluginHub":47,"./ReactUpdates":102}],81:[function(require,module,exports){
+},{"./EventPluginHub":53,"./ReactUpdates":108}],87:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -17274,7 +16183,7 @@ var ReactEventTopLevelCallback = {
 
 module.exports = ReactEventTopLevelCallback;
 
-},{"./PooledClass":54,"./ReactEventEmitter":79,"./ReactInstanceHandles":84,"./ReactMount":86,"./getEventTarget":135,"./mixInto":155}],82:[function(require,module,exports){
+},{"./PooledClass":60,"./ReactEventEmitter":85,"./ReactInstanceHandles":90,"./ReactMount":92,"./getEventTarget":141,"./mixInto":161}],88:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -17319,7 +16228,7 @@ var ReactInjection = {
 
 module.exports = ReactInjection;
 
-},{"./DOMProperty":39,"./EventPluginHub":47,"./ReactComponent":58,"./ReactCompositeComponent":60,"./ReactDOM":63,"./ReactEventEmitter":79,"./ReactPerf":91,"./ReactRootIndex":98,"./ReactUpdates":102}],83:[function(require,module,exports){
+},{"./DOMProperty":45,"./EventPluginHub":53,"./ReactComponent":64,"./ReactCompositeComponent":66,"./ReactDOM":69,"./ReactEventEmitter":85,"./ReactPerf":97,"./ReactRootIndex":104,"./ReactUpdates":108}],89:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -17462,7 +16371,7 @@ var ReactInputSelection = {
 
 module.exports = ReactInputSelection;
 
-},{"./ReactDOMSelection":72,"./containsNode":120,"./focusNode":131,"./getActiveElement":133}],84:[function(require,module,exports){
+},{"./ReactDOMSelection":78,"./containsNode":126,"./focusNode":137,"./getActiveElement":139}],90:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -17804,7 +16713,7 @@ var ReactInstanceHandles = {
 module.exports = ReactInstanceHandles;
 
 }).call(this,require("n7q+al"))
-},{"./ReactRootIndex":98,"./invariant":143,"n7q+al":30}],85:[function(require,module,exports){
+},{"./ReactRootIndex":104,"./invariant":149,"n7q+al":36}],91:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -17859,7 +16768,7 @@ var ReactMarkupChecksum = {
 
 module.exports = ReactMarkupChecksum;
 
-},{"./adler32":119}],86:[function(require,module,exports){
+},{"./adler32":125}],92:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -18512,7 +17421,7 @@ var ReactMount = {
 module.exports = ReactMount;
 
 }).call(this,require("n7q+al"))
-},{"./DOMProperty":39,"./ReactEventEmitter":79,"./ReactInstanceHandles":84,"./ReactPerf":91,"./containsNode":120,"./getReactRootElementInContainer":138,"./instantiateReactComponent":142,"./invariant":143,"./shouldUpdateReactComponent":162,"n7q+al":30}],87:[function(require,module,exports){
+},{"./DOMProperty":45,"./ReactEventEmitter":85,"./ReactInstanceHandles":90,"./ReactPerf":97,"./containsNode":126,"./getReactRootElementInContainer":144,"./instantiateReactComponent":148,"./invariant":149,"./shouldUpdateReactComponent":168,"n7q+al":36}],93:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -18609,7 +17518,7 @@ PooledClass.addPoolingTo(ReactMountReady);
 
 module.exports = ReactMountReady;
 
-},{"./PooledClass":54,"./mixInto":155}],88:[function(require,module,exports){
+},{"./PooledClass":60,"./mixInto":161}],94:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -19043,7 +17952,7 @@ var ReactMultiChild = {
 
 module.exports = ReactMultiChild;
 
-},{"./ReactComponent":58,"./ReactMultiChildUpdateTypes":89,"./flattenChildren":130,"./instantiateReactComponent":142,"./shouldUpdateReactComponent":162}],89:[function(require,module,exports){
+},{"./ReactComponent":64,"./ReactMultiChildUpdateTypes":95,"./flattenChildren":136,"./instantiateReactComponent":148,"./shouldUpdateReactComponent":168}],95:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -19083,7 +17992,7 @@ var ReactMultiChildUpdateTypes = keyMirror({
 
 module.exports = ReactMultiChildUpdateTypes;
 
-},{"./keyMirror":149}],90:[function(require,module,exports){
+},{"./keyMirror":155}],96:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -19246,7 +18155,7 @@ var ReactOwner = {
 module.exports = ReactOwner;
 
 }).call(this,require("n7q+al"))
-},{"./emptyObject":128,"./invariant":143,"n7q+al":30}],91:[function(require,module,exports){
+},{"./emptyObject":134,"./invariant":149,"n7q+al":36}],97:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -19335,7 +18244,7 @@ function _noMeasure(objName, fnName, func) {
 module.exports = ReactPerf;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],92:[function(require,module,exports){
+},{"n7q+al":36}],98:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -19486,7 +18395,7 @@ var ReactPropTransferer = {
 module.exports = ReactPropTransferer;
 
 }).call(this,require("n7q+al"))
-},{"./emptyFunction":127,"./invariant":143,"./joinClasses":148,"./merge":152,"n7q+al":30}],93:[function(require,module,exports){
+},{"./emptyFunction":133,"./invariant":149,"./joinClasses":154,"./merge":158,"n7q+al":36}],99:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -19521,7 +18430,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = ReactPropTypeLocationNames;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],94:[function(require,module,exports){
+},{"n7q+al":36}],100:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -19552,7 +18461,7 @@ var ReactPropTypeLocations = keyMirror({
 
 module.exports = ReactPropTypeLocations;
 
-},{"./keyMirror":149}],95:[function(require,module,exports){
+},{"./keyMirror":155}],101:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -19915,7 +18824,7 @@ function createChainableTypeChecker(validate) {
 module.exports = Props;
 
 }).call(this,require("n7q+al"))
-},{"./ReactComponent":58,"./ReactPropTypeLocationNames":93,"./createObjectFrom":125,"./warning":165,"n7q+al":30}],96:[function(require,module,exports){
+},{"./ReactComponent":64,"./ReactPropTypeLocationNames":99,"./createObjectFrom":131,"./warning":171,"n7q+al":36}],102:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -19978,7 +18887,7 @@ PooledClass.addPoolingTo(ReactPutListenerQueue);
 
 module.exports = ReactPutListenerQueue;
 
-},{"./PooledClass":54,"./ReactEventEmitter":79,"./mixInto":155}],97:[function(require,module,exports){
+},{"./PooledClass":60,"./ReactEventEmitter":85,"./mixInto":161}],103:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -20162,7 +19071,7 @@ PooledClass.addPoolingTo(ReactReconcileTransaction);
 
 module.exports = ReactReconcileTransaction;
 
-},{"./PooledClass":54,"./ReactEventEmitter":79,"./ReactInputSelection":83,"./ReactMountReady":87,"./ReactPutListenerQueue":96,"./Transaction":116,"./mixInto":155}],98:[function(require,module,exports){
+},{"./PooledClass":60,"./ReactEventEmitter":85,"./ReactInputSelection":89,"./ReactMountReady":93,"./ReactPutListenerQueue":102,"./Transaction":122,"./mixInto":161}],104:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -20200,7 +19109,7 @@ var ReactRootIndex = {
 
 module.exports = ReactRootIndex;
 
-},{}],99:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -20293,7 +19202,7 @@ module.exports = {
 };
 
 }).call(this,require("n7q+al"))
-},{"./ReactComponent":58,"./ReactInstanceHandles":84,"./ReactMarkupChecksum":85,"./ReactServerRenderingTransaction":100,"./instantiateReactComponent":142,"./invariant":143,"n7q+al":30}],100:[function(require,module,exports){
+},{"./ReactComponent":64,"./ReactInstanceHandles":90,"./ReactMarkupChecksum":91,"./ReactServerRenderingTransaction":106,"./instantiateReactComponent":148,"./invariant":149,"n7q+al":36}],106:[function(require,module,exports){
 /**
  * Copyright 2014 Facebook, Inc.
  *
@@ -20411,7 +19320,7 @@ PooledClass.addPoolingTo(ReactServerRenderingTransaction);
 
 module.exports = ReactServerRenderingTransaction;
 
-},{"./PooledClass":54,"./ReactMountReady":87,"./ReactPutListenerQueue":96,"./Transaction":116,"./emptyFunction":127,"./mixInto":155}],101:[function(require,module,exports){
+},{"./PooledClass":60,"./ReactMountReady":93,"./ReactPutListenerQueue":102,"./Transaction":122,"./emptyFunction":133,"./mixInto":161}],107:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -20534,7 +19443,7 @@ ReactTextComponent.prototype.type = ReactTextComponent;
 
 module.exports = ReactTextComponent;
 
-},{"./DOMPropertyOperations":40,"./ReactBrowserComponentMixin":56,"./ReactComponent":58,"./escapeTextForBrowser":129,"./mixInto":155}],102:[function(require,module,exports){
+},{"./DOMPropertyOperations":46,"./ReactBrowserComponentMixin":62,"./ReactComponent":64,"./escapeTextForBrowser":135,"./mixInto":161}],108:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -20686,7 +19595,7 @@ var ReactUpdates = {
 module.exports = ReactUpdates;
 
 }).call(this,require("n7q+al"))
-},{"./ReactPerf":91,"./invariant":143,"n7q+al":30}],103:[function(require,module,exports){
+},{"./ReactPerf":97,"./invariant":149,"n7q+al":36}],109:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -20888,7 +19797,7 @@ var SelectEventPlugin = {
 
 module.exports = SelectEventPlugin;
 
-},{"./EventConstants":45,"./EventPropagators":50,"./ReactInputSelection":83,"./SyntheticEvent":109,"./getActiveElement":133,"./isTextInputElement":146,"./keyOf":150,"./shallowEqual":161}],104:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPropagators":56,"./ReactInputSelection":89,"./SyntheticEvent":115,"./getActiveElement":139,"./isTextInputElement":152,"./keyOf":156,"./shallowEqual":167}],110:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -20926,7 +19835,7 @@ var ServerReactRootIndex = {
 
 module.exports = ServerReactRootIndex;
 
-},{}],105:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -21343,7 +20252,7 @@ var SimpleEventPlugin = {
 module.exports = SimpleEventPlugin;
 
 }).call(this,require("n7q+al"))
-},{"./EventConstants":45,"./EventPluginUtils":49,"./EventPropagators":50,"./SyntheticClipboardEvent":106,"./SyntheticDragEvent":108,"./SyntheticEvent":109,"./SyntheticFocusEvent":110,"./SyntheticKeyboardEvent":111,"./SyntheticMouseEvent":112,"./SyntheticTouchEvent":113,"./SyntheticUIEvent":114,"./SyntheticWheelEvent":115,"./invariant":143,"./keyOf":150,"n7q+al":30}],106:[function(require,module,exports){
+},{"./EventConstants":51,"./EventPluginUtils":55,"./EventPropagators":56,"./SyntheticClipboardEvent":112,"./SyntheticDragEvent":114,"./SyntheticEvent":115,"./SyntheticFocusEvent":116,"./SyntheticKeyboardEvent":117,"./SyntheticMouseEvent":118,"./SyntheticTouchEvent":119,"./SyntheticUIEvent":120,"./SyntheticWheelEvent":121,"./invariant":149,"./keyOf":156,"n7q+al":36}],112:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21396,7 +20305,7 @@ SyntheticEvent.augmentClass(SyntheticClipboardEvent, ClipboardEventInterface);
 module.exports = SyntheticClipboardEvent;
 
 
-},{"./SyntheticEvent":109}],107:[function(require,module,exports){
+},{"./SyntheticEvent":115}],113:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21449,7 +20358,7 @@ SyntheticEvent.augmentClass(
 module.exports = SyntheticCompositionEvent;
 
 
-},{"./SyntheticEvent":109}],108:[function(require,module,exports){
+},{"./SyntheticEvent":115}],114:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21495,7 +20404,7 @@ SyntheticMouseEvent.augmentClass(SyntheticDragEvent, DragEventInterface);
 
 module.exports = SyntheticDragEvent;
 
-},{"./SyntheticMouseEvent":112}],109:[function(require,module,exports){
+},{"./SyntheticMouseEvent":118}],115:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21661,7 +20570,7 @@ PooledClass.addPoolingTo(SyntheticEvent, PooledClass.threeArgumentPooler);
 
 module.exports = SyntheticEvent;
 
-},{"./PooledClass":54,"./emptyFunction":127,"./getEventTarget":135,"./merge":152,"./mergeInto":154}],110:[function(require,module,exports){
+},{"./PooledClass":60,"./emptyFunction":133,"./getEventTarget":141,"./merge":158,"./mergeInto":160}],116:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21707,7 +20616,7 @@ SyntheticUIEvent.augmentClass(SyntheticFocusEvent, FocusEventInterface);
 
 module.exports = SyntheticFocusEvent;
 
-},{"./SyntheticUIEvent":114}],111:[function(require,module,exports){
+},{"./SyntheticUIEvent":120}],117:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21767,7 +20676,7 @@ SyntheticUIEvent.augmentClass(SyntheticKeyboardEvent, KeyboardEventInterface);
 
 module.exports = SyntheticKeyboardEvent;
 
-},{"./SyntheticUIEvent":114,"./getEventKey":134}],112:[function(require,module,exports){
+},{"./SyntheticUIEvent":120,"./getEventKey":140}],118:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21854,7 +20763,7 @@ SyntheticUIEvent.augmentClass(SyntheticMouseEvent, MouseEventInterface);
 
 module.exports = SyntheticMouseEvent;
 
-},{"./SyntheticUIEvent":114,"./ViewportMetrics":117}],113:[function(require,module,exports){
+},{"./SyntheticUIEvent":120,"./ViewportMetrics":123}],119:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21906,7 +20815,7 @@ SyntheticUIEvent.augmentClass(SyntheticTouchEvent, TouchEventInterface);
 
 module.exports = SyntheticTouchEvent;
 
-},{"./SyntheticUIEvent":114}],114:[function(require,module,exports){
+},{"./SyntheticUIEvent":120}],120:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -21953,7 +20862,7 @@ SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 
 module.exports = SyntheticUIEvent;
 
-},{"./SyntheticEvent":109}],115:[function(require,module,exports){
+},{"./SyntheticEvent":115}],121:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22021,7 +20930,7 @@ SyntheticMouseEvent.augmentClass(SyntheticWheelEvent, WheelEventInterface);
 
 module.exports = SyntheticWheelEvent;
 
-},{"./SyntheticMouseEvent":112}],116:[function(require,module,exports){
+},{"./SyntheticMouseEvent":118}],122:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22301,7 +21210,7 @@ var Transaction = {
 module.exports = Transaction;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],117:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],123:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22340,7 +21249,7 @@ var ViewportMetrics = {
 
 module.exports = ViewportMetrics;
 
-},{"./getUnboundedScrollPosition":140}],118:[function(require,module,exports){
+},{"./getUnboundedScrollPosition":146}],124:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22398,7 +21307,7 @@ function accumulate(current, next) {
 module.exports = accumulate;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],119:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],125:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22439,7 +21348,7 @@ function adler32(data) {
 
 module.exports = adler32;
 
-},{}],120:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22490,7 +21399,7 @@ function containsNode(outerNode, innerNode) {
 
 module.exports = containsNode;
 
-},{"./isTextNode":147}],121:[function(require,module,exports){
+},{"./isTextNode":153}],127:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22548,7 +21457,7 @@ function copyProperties(obj, a, b, c, d, e, f) {
 module.exports = copyProperties;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],122:[function(require,module,exports){
+},{"n7q+al":36}],128:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22641,7 +21550,7 @@ function createArrayFrom(obj) {
 
 module.exports = createArrayFrom;
 
-},{"./toArray":163}],123:[function(require,module,exports){
+},{"./toArray":169}],129:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22708,7 +21617,7 @@ function createFullPageComponent(componentClass) {
 module.exports = createFullPageComponent;
 
 }).call(this,require("n7q+al"))
-},{"./ReactCompositeComponent":60,"./invariant":143,"n7q+al":30}],124:[function(require,module,exports){
+},{"./ReactCompositeComponent":66,"./invariant":149,"n7q+al":36}],130:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22805,7 +21714,7 @@ function createNodesFromMarkup(markup, handleScript) {
 module.exports = createNodesFromMarkup;
 
 }).call(this,require("n7q+al"))
-},{"./ExecutionEnvironment":51,"./createArrayFrom":122,"./getMarkupWrap":136,"./invariant":143,"n7q+al":30}],125:[function(require,module,exports){
+},{"./ExecutionEnvironment":57,"./createArrayFrom":128,"./getMarkupWrap":142,"./invariant":149,"n7q+al":36}],131:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -22870,7 +21779,7 @@ function createObjectFrom(keys, values /* = true */) {
 module.exports = createObjectFrom;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],126:[function(require,module,exports){
+},{"n7q+al":36}],132:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22929,7 +21838,7 @@ function dangerousStyleValue(styleName, value) {
 
 module.exports = dangerousStyleValue;
 
-},{"./CSSProperty":33}],127:[function(require,module,exports){
+},{"./CSSProperty":39}],133:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -22974,7 +21883,7 @@ copyProperties(emptyFunction, {
 
 module.exports = emptyFunction;
 
-},{"./copyProperties":121}],128:[function(require,module,exports){
+},{"./copyProperties":127}],134:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -23005,7 +21914,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = emptyObject;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],129:[function(require,module,exports){
+},{"n7q+al":36}],135:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23054,7 +21963,7 @@ function escapeTextForBrowser(text) {
 
 module.exports = escapeTextForBrowser;
 
-},{}],130:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -23115,7 +22024,7 @@ function flattenChildren(children) {
 module.exports = flattenChildren;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"./traverseAllChildren":164,"n7q+al":30}],131:[function(require,module,exports){
+},{"./invariant":149,"./traverseAllChildren":170,"n7q+al":36}],137:[function(require,module,exports){
 /**
  * Copyright 2014 Facebook, Inc.
  *
@@ -23150,7 +22059,7 @@ function focusNode(node) {
 
 module.exports = focusNode;
 
-},{}],132:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23188,7 +22097,7 @@ var forEachAccumulated = function(arr, cb, scope) {
 
 module.exports = forEachAccumulated;
 
-},{}],133:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23224,7 +22133,7 @@ function getActiveElement() /*?DOMElement*/ {
 
 module.exports = getActiveElement;
 
-},{}],134:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23311,7 +22220,7 @@ function getEventKey(nativeEvent) {
 
 module.exports = getEventKey;
 
-},{}],135:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23349,7 +22258,7 @@ function getEventTarget(nativeEvent) {
 
 module.exports = getEventTarget;
 
-},{}],136:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -23471,7 +22380,7 @@ function getMarkupWrap(nodeName) {
 module.exports = getMarkupWrap;
 
 }).call(this,require("n7q+al"))
-},{"./ExecutionEnvironment":51,"./invariant":143,"n7q+al":30}],137:[function(require,module,exports){
+},{"./ExecutionEnvironment":57,"./invariant":149,"n7q+al":36}],143:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23553,7 +22462,7 @@ function getNodeForCharacterOffset(root, offset) {
 
 module.exports = getNodeForCharacterOffset;
 
-},{}],138:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23595,7 +22504,7 @@ function getReactRootElementInContainer(container) {
 
 module.exports = getReactRootElementInContainer;
 
-},{}],139:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23639,7 +22548,7 @@ function getTextContentAccessor() {
 
 module.exports = getTextContentAccessor;
 
-},{"./ExecutionEnvironment":51}],140:[function(require,module,exports){
+},{"./ExecutionEnvironment":57}],146:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23686,7 +22595,7 @@ function getUnboundedScrollPosition(scrollable) {
 
 module.exports = getUnboundedScrollPosition;
 
-},{}],141:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23723,7 +22632,7 @@ function hyphenate(string) {
 
 module.exports = hyphenate;
 
-},{}],142:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -23797,7 +22706,7 @@ function instantiateReactComponent(descriptor) {
 module.exports = instantiateReactComponent;
 
 }).call(this,require("n7q+al"))
-},{"./warning":165,"n7q+al":30}],143:[function(require,module,exports){
+},{"./warning":171,"n7q+al":36}],149:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -23863,7 +22772,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = invariant;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],144:[function(require,module,exports){
+},{"n7q+al":36}],150:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23935,7 +22844,7 @@ function isEventSupported(eventNameSuffix, capture) {
 
 module.exports = isEventSupported;
 
-},{"./ExecutionEnvironment":51}],145:[function(require,module,exports){
+},{"./ExecutionEnvironment":57}],151:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -23970,7 +22879,7 @@ function isNode(object) {
 
 module.exports = isNode;
 
-},{}],146:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24021,7 +22930,7 @@ function isTextInputElement(elem) {
 
 module.exports = isTextInputElement;
 
-},{}],147:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24053,7 +22962,7 @@ function isTextNode(object) {
 
 module.exports = isTextNode;
 
-},{"./isNode":145}],148:[function(require,module,exports){
+},{"./isNode":151}],154:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24099,7 +23008,7 @@ function joinClasses(className/*, ... */) {
 
 module.exports = joinClasses;
 
-},{}],149:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -24161,7 +23070,7 @@ var keyMirror = function(obj) {
 module.exports = keyMirror;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],150:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],156:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24204,7 +23113,7 @@ var keyOf = function(oneKeyObj) {
 
 module.exports = keyOf;
 
-},{}],151:[function(require,module,exports){
+},{}],157:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24245,7 +23154,7 @@ function memoizeStringOnly(callback) {
 
 module.exports = memoizeStringOnly;
 
-},{}],152:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24284,7 +23193,7 @@ var merge = function(one, two) {
 
 module.exports = merge;
 
-},{"./mergeInto":154}],153:[function(require,module,exports){
+},{"./mergeInto":160}],159:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -24424,7 +23333,7 @@ var mergeHelpers = {
 module.exports = mergeHelpers;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"./keyMirror":149,"n7q+al":30}],154:[function(require,module,exports){
+},{"./invariant":149,"./keyMirror":155,"n7q+al":36}],160:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24471,7 +23380,7 @@ function mergeInto(one, two) {
 
 module.exports = mergeInto;
 
-},{"./mergeHelpers":153}],155:[function(require,module,exports){
+},{"./mergeHelpers":159}],161:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24507,7 +23416,7 @@ var mixInto = function(constructor, methodBag) {
 
 module.exports = mixInto;
 
-},{}],156:[function(require,module,exports){
+},{}],162:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014 Facebook, Inc.
@@ -24548,7 +23457,7 @@ function monitorCodeUse(eventName, data) {
 module.exports = monitorCodeUse;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],157:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],163:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24597,7 +23506,7 @@ function objMap(obj, func, context) {
 
 module.exports = objMap;
 
-},{}],158:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24646,7 +23555,7 @@ function objMapKeyVal(obj, func, context) {
 
 module.exports = objMapKeyVal;
 
-},{}],159:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -24693,7 +23602,7 @@ function onlyChild(children) {
 module.exports = onlyChild;
 
 }).call(this,require("n7q+al"))
-},{"./ReactComponent":58,"./invariant":143,"n7q+al":30}],160:[function(require,module,exports){
+},{"./ReactComponent":64,"./invariant":149,"n7q+al":36}],166:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24737,7 +23646,7 @@ var performanceNow = performance.now.bind(performance);
 
 module.exports = performanceNow;
 
-},{"./ExecutionEnvironment":51}],161:[function(require,module,exports){
+},{"./ExecutionEnvironment":57}],167:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -24788,7 +23697,7 @@ function shallowEqual(objA, objB) {
 
 module.exports = shallowEqual;
 
-},{}],162:[function(require,module,exports){
+},{}],168:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -24853,7 +23762,7 @@ function shouldUpdateReactComponent(prevComponentInstance, nextDescriptor) {
 module.exports = shouldUpdateReactComponent;
 
 }).call(this,require("n7q+al"))
-},{"n7q+al":30}],163:[function(require,module,exports){
+},{"n7q+al":36}],169:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014 Facebook, Inc.
@@ -24932,7 +23841,7 @@ function toArray(obj) {
 module.exports = toArray;
 
 }).call(this,require("n7q+al"))
-},{"./invariant":143,"n7q+al":30}],164:[function(require,module,exports){
+},{"./invariant":149,"n7q+al":36}],170:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2014 Facebook, Inc.
@@ -25126,7 +24035,7 @@ function traverseAllChildren(children, callback, traverseContext) {
 module.exports = traverseAllChildren;
 
 }).call(this,require("n7q+al"))
-},{"./ReactInstanceHandles":84,"./ReactTextComponent":101,"./invariant":143,"n7q+al":30}],165:[function(require,module,exports){
+},{"./ReactInstanceHandles":90,"./ReactTextComponent":107,"./invariant":149,"n7q+al":36}],171:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014 Facebook, Inc.
@@ -25178,10 +24087,10 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = warning;
 
 }).call(this,require("n7q+al"))
-},{"./emptyFunction":127,"n7q+al":30}],166:[function(require,module,exports){
+},{"./emptyFunction":133,"n7q+al":36}],172:[function(require,module,exports){
 module.exports = require('./lib/React');
 
-},{"./lib/React":55}],167:[function(require,module,exports){
+},{"./lib/React":61}],173:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25285,7 +24194,7 @@ function objEquiv (a, b) {
   return true;
 }
 
-},{"./util":181}],168:[function(require,module,exports){
+},{"./util":187}],174:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25342,7 +24251,7 @@ module.exports = function(should) {
     }
   };
 };
-},{"../util":181,"assert":23}],169:[function(require,module,exports){
+},{"../util":187,"assert":29}],175:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25368,7 +24277,7 @@ module.exports = function(should, Assertion) {
     this.assert(this.obj);
   }, true);
 };
-},{}],170:[function(require,module,exports){
+},{}],176:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25388,7 +24297,7 @@ module.exports = function(should, Assertion) {
 
   ['an', 'of', 'a', 'and', 'be', 'have', 'with', 'is', 'which', 'the'].forEach(addLink);
 };
-},{}],171:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25505,7 +24414,7 @@ module.exports = function(should, Assertion) {
 
 };
 
-},{"../eql":167,"../util":181}],172:[function(require,module,exports){
+},{"../eql":173,"../util":187}],178:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25529,7 +24438,7 @@ module.exports = function(should, Assertion) {
 
   Assertion.alias('equal', 'exactly');
 };
-},{"../eql":167}],173:[function(require,module,exports){
+},{"../eql":173}],179:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25607,7 +24516,7 @@ module.exports = function(should, Assertion) {
 
   Assertion.alias('throw', 'throwError');
 };
-},{"../util":181}],174:[function(require,module,exports){
+},{"../util":187}],180:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25720,7 +24629,7 @@ module.exports = function(should, Assertion) {
     }, this);
   });
 };
-},{"../eql":167,"../util":181}],175:[function(require,module,exports){
+},{"../eql":173,"../util":187}],181:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25771,7 +24680,7 @@ module.exports = function(should, Assertion) {
 
 };
 
-},{}],176:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -25980,7 +24889,7 @@ module.exports = function(should, Assertion) {
   });
 };
 
-},{"../eql":167,"../util":181}],177:[function(require,module,exports){
+},{"../eql":173,"../util":187}],183:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -26000,7 +24909,7 @@ module.exports = function(should, Assertion) {
     this.assert(this.obj.indexOf(str, this.obj.length - str.length) >= 0);
   });
 };
-},{}],178:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -26081,7 +24990,7 @@ module.exports = function(should, Assertion) {
   Assertion.alias('instanceof', 'instanceOf');
 };
 
-},{"../util":181}],179:[function(require,module,exports){
+},{"../util":187}],185:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -26521,7 +25430,7 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-},{"./util":181}],180:[function(require,module,exports){
+},{"./util":187}],186:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2014 TJ Holowaychuk <tj@vision-media.ca>
@@ -26715,7 +25624,7 @@ should
   .use(require('./ext/match'))
   .use(require('./ext/contain'));
 
-},{"./ext/assert":168,"./ext/bool":169,"./ext/chain":170,"./ext/contain":171,"./ext/eql":172,"./ext/error":173,"./ext/match":174,"./ext/number":175,"./ext/property":176,"./ext/string":177,"./ext/type":178,"./util":181}],181:[function(require,module,exports){
+},{"./ext/assert":174,"./ext/bool":175,"./ext/chain":176,"./ext/contain":177,"./ext/eql":178,"./ext/error":179,"./ext/match":180,"./ext/number":181,"./ext/property":182,"./ext/string":183,"./ext/type":184,"./util":187}],187:[function(require,module,exports){
 (function (Buffer){
 /*!
  * Should
@@ -26877,7 +25786,7 @@ exports.formatProp = function(name) {
   return name;
 }
 }).call(this,require("buffer").Buffer)
-},{"./inspect":179,"assert":23,"buffer":26}],182:[function(require,module,exports){
+},{"./inspect":185,"assert":29,"buffer":32}],188:[function(require,module,exports){
 (function() {
   module.exports = {
     listenTo: function(ee, event, listener) {
@@ -26907,7 +25816,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{}],183:[function(require,module,exports){
+},{}],189:[function(require,module,exports){
 (function() {
   module.exports = function(config) {
     var aliases, k, v;
@@ -26933,7 +25842,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{}],184:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 (function() {
   var ListenerMixin, createCollection, view;
 
@@ -26995,34 +25904,29 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./ListenerMixin":182,"./createCollection":185,"./view":193}],185:[function(require,module,exports){
+},{"./ListenerMixin":188,"./createCollection":191,"./view":199}],191:[function(require,module,exports){
 (function() {
-  var Backbone;
+  var Collection, underscoreMixin;
 
-  Backbone = require('backbone');
+  Collection = require('ampersand-collection');
+
+  underscoreMixin = require('ampersand-collection-underscore-mixin');
 
   module.exports = function(model) {
-    var col, inst;
-    if (model.prototype.getType() === 'model') {
-      inst = new model;
-      if (!(inst instanceof Backbone.Model)) {
-        throw new Error("fission#createCollection: Model provided not a Backbone Model");
-      }
-      col = Backbone.Collection.extend({
-        model: model,
-        url: inst.urlRoot
-      });
-    } else if (model instanceof Backbone.Collection) {
-      col = Backbone.Collection.extend(model);
+    var col;
+    if (model.isCollection) {
+      col = Collection.extend(model);
     } else {
-      throw new Error("fission#createCollection: Model or Collection specified invalid: " + model);
+      col = Collection.extend(underscoreMixin, {
+        model: model
+      });
     }
     return col;
   };
 
 }).call(this);
 
-},{"backbone":21}],186:[function(require,module,exports){
+},{"ampersand-collection":3,"ampersand-collection-underscore-mixin":1}],192:[function(require,module,exports){
 (function() {
   module.exports = {
     router: require('./router'),
@@ -27045,7 +25949,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./ListenerMixin":182,"./alias":183,"./collectionView":184,"./createCollection":185,"./middleware/auth":187,"./middleware/clearFB":188,"./middleware/log":189,"./model":190,"./modelView":191,"./router":192,"./view":193,"react":166}],187:[function(require,module,exports){
+},{"./ListenerMixin":188,"./alias":189,"./collectionView":190,"./createCollection":191,"./middleware/auth":193,"./middleware/clearFB":194,"./middleware/log":195,"./model":196,"./modelView":197,"./router":198,"./view":199,"react":172}],193:[function(require,module,exports){
 (function() {
   module.exports = function(me) {
     return function(ctx, next) {
@@ -27062,7 +25966,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{}],188:[function(require,module,exports){
+},{}],194:[function(require,module,exports){
 (function() {
   module.exports = function(ctx, next) {
     var scroll;
@@ -27084,7 +25988,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{}],189:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 (function() {
   module.exports = function(ctx, next) {
     console.log('Routing called', ctx);
@@ -27093,7 +25997,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{}],190:[function(require,module,exports){
+},{}],196:[function(require,module,exports){
 (function() {
   var Model;
 
@@ -27107,7 +26011,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"ampersand-model":1}],191:[function(require,module,exports){
+},{"ampersand-model":9}],197:[function(require,module,exports){
 (function() {
   var ListenerMixin, view;
 
@@ -27147,7 +26051,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./ListenerMixin":182,"./view":193}],192:[function(require,module,exports){
+},{"./ListenerMixin":188,"./view":199}],198:[function(require,module,exports){
 (function() {
   var React, app, page, renderView,
     __slice = [].slice;
@@ -27231,7 +26135,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"page":31,"react":166}],193:[function(require,module,exports){
+},{"page":37,"react":172}],199:[function(require,module,exports){
 (function() {
   var React, alias;
 
@@ -27245,7 +26149,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./alias":183,"react":166}],194:[function(require,module,exports){
+},{"./alias":189,"react":172}],200:[function(require,module,exports){
 (function() {
   var aliasLifecycle;
 
@@ -27272,33 +26176,35 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src/alias":183}],195:[function(require,module,exports){
+},{"../src/alias":189}],201:[function(require,module,exports){
 (function() {
-  var Backbone, createCollection, model;
+  var createCollection, model, should;
+
+  should = require('should');
 
   createCollection = require('../src/createCollection');
 
   model = require('../src/model');
 
-  Backbone = require('backbone');
-
   describe("#createCollection", function() {
     return it("should return a collection", function(done) {
       var col, inst, m;
       m = model({
-        urlRoot: '/v1/foo',
-        modelType: 'foo'
+        props: {
+          firstName: 'string',
+          lastName: 'string'
+        }
       });
       col = createCollection(m);
       inst = new col;
-      inst.should.be.instanceOf(Backbone.Collection);
+      inst.isCollection.should.equal(true);
       return done();
     });
   });
 
 }).call(this);
 
-},{"../src/createCollection":185,"../src/model":190,"backbone":21}],196:[function(require,module,exports){
+},{"../src/createCollection":191,"../src/model":196,"should":186}],202:[function(require,module,exports){
 (function() {
   ({
     fission: require('./'),
@@ -27311,7 +26217,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"./":197,"./alias":194,"./createCollection":195,"./model":198,"./modelView":199,"./view":200}],197:[function(require,module,exports){
+},{"./":203,"./alias":200,"./createCollection":201,"./model":204,"./modelView":205,"./view":206}],203:[function(require,module,exports){
 (function() {
   var fission, should;
 
@@ -27336,7 +26242,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src/index":186,"should":180}],198:[function(require,module,exports){
+},{"../src/index":192,"should":186}],204:[function(require,module,exports){
 (function() {
   var model, should;
 
@@ -27365,7 +26271,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src":186,"should":180}],199:[function(require,module,exports){
+},{"../src":192,"should":186}],205:[function(require,module,exports){
 (function() {
   var React, model, modelView, should, utils;
 
@@ -27405,7 +26311,7 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src/model":190,"../src/modelView":191,"should":180}],200:[function(require,module,exports){
+},{"../src/model":196,"../src/modelView":197,"should":186}],206:[function(require,module,exports){
 (function() {
   var should, view;
 
@@ -27431,4 +26337,4 @@ exports.formatProp = function(name) {
 
 }).call(this);
 
-},{"../src":186,"should":180}]},{},[196])
+},{"../src":192,"should":186}]},{},[202])
