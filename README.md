@@ -1,7 +1,7 @@
-#fission
+#Fission [![NPM version][npm-image]][npm-url]  [![Build Status][travis-image]][travis-url]
 
 
-#### Model 
+#### Model
 
 model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
 
@@ -15,7 +15,7 @@ fission.model({
 
 ```
 
-#### Routing 
+#### Routing
 
 ```js
 var router = fission.router;
@@ -34,7 +34,7 @@ router.route('/match/:id', {
 
 ```
 
-#### Collection View 
+#### Collection View
 collectionView gets an array of **this.items** - the collections' models rendered into their **itemView**
 
 ```js
@@ -54,11 +54,11 @@ fission.collectionView({
   }
 });
 
-```     
-     
+```
+
 #### Model View
 
-render gets **this.model** - a reference to the associated model either when either model or id is passed into **props** or via and *id* **params**  
+render gets **this.model** - a reference to the associated model either when either model or id is passed into **props** or via and *id* **params**
 
 ```js
 
@@ -80,3 +80,12 @@ fission.modelView({
 });
 
 ```
+
+
+
+
+[travis-url]: https://travis-ci.org/wearefractal/fission
+[travis-image]: https://travis-ci.org/wearefractal/fission.png?branch=master
+
+[npm-url]: https://npmjs.org/package/fission
+[npm-image]: http://img.shields.io/npm/v/fission.svg
