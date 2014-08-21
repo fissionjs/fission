@@ -15,4 +15,5 @@ describe "fission", ->
     fission.should.have.property 'alias'
     fission.should.have.property 'createCollection'
     fission.should.have.property 'model'
+
     done()

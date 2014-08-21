@@ -1,12 +1,10 @@
 (function() {
   define(function(require) {
-    var router;
-    router = require('router');
-    return router.start({
-      click: true,
-      dispatch: true,
-      popstate: true
-    });
+    var Fission, routes;
+    Fission = require('vendor/fission');
+    routes = require('./routes');
+    console.log("start");
+    return console.log(Fission);
   });
 
 }).call(this);

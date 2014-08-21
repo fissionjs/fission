@@ -1,21 +1,21 @@
-Backbone = require 'backbone'
+Collection = require 'ampersand-collection'
+underscoreMixin = require 'ampersand-collection-underscore-mixin'
 
 module.exports = (model) ->
 
-  # create collection from a model
-  if model.prototype.getType() is 'model'
-    inst = new model
-    if !(inst instanceof Backbone.Model)
-      throw new Error "fission#createCollection: Model provided not a Backbone Model"
-    col = Backbone.Collection.extend
-      model: model
-      url: inst.urlRoot
-
   # just a collection wrapper
-  else if model instanceof Backbone.Collection
-    col = Backbone.Collection.extend model
+  if model.isCollection
+    col = Collection.extend model
 
+  #TODO: figure out best way to do model check
   else
-    throw new Error "fission#createCollection: Model or Collection specified invalid: #{model}"
+    col = Collection.extend underscoreMixin,
+      model: model
+
+      # TODO deal with sync option translation
+      #url: inst.urlRoot
+
+  #else
+  #  throw new Error "fission#createCollection: Model or Collection specified invalid: #{model}"
 
   return col
