@@ -8,60 +8,57 @@ mocha      = require 'gulp-mocha'
 
 source     = require 'vinyl-source-stream'
 buffer     = require 'vinyl-buffer'
-watchify   = require 'watchify'
 coffeeify  = require 'coffeeify'
+browserify   = require 'browserify'
 
 
 
 paths =
   coffee: 'src/**/*.coffee'
-  coffeeSrc: 'src/index.coffee'
+  coffeeSrc: './src/index.coffee'
   test: 'test/main.coffee'
 
 gulp.task 'watch', ->
   autowatch gulp, paths
 
 gulp.task 'test', ->
-  testBundleCache = {}
-  testBundler = watchify "./test/main.coffee",
-    cache: testBundleCache
-    extensions: ['.coffee']
-  testBundler.transform coffeeify
-  testBundler.bundle
+  bCache = {}
+  b = browserify "./test/main.coffee",
     standalone: "fission"
     debug: true
     insertGlobals: true
+    cache: bCache
+    extensions: ['.coffee']
+  b.transform coffeeify
+  b.bundle()
   .pipe source "main.js"
   .pipe buffer()
   .pipe sourcemaps.init()
   .pipe sourcemaps.write()
   .pipe gulp.dest 'test/browser'
-  .close()
+
 
 gulp.task 'test:browser', ['test'], ->
   gulp.src './test/browser/index.html'
     .pipe open()
 
 gulp.task 'coffee', ->
-  bundleCache = {}
-  bundler = watchify "./src/index.coffee",
-    cache: bundleCache
-    extensions: ['.coffee']
-  bundler.transform coffeeify
-  bundler.bundle
+  bCache = {}
+  b = browserify paths.coffeeSrc,
     standalone: "fission"
     debug: true
     insertGlobals: true
+    cache: bCache
+    extensions: ['.coffee']
+  b.transform coffeeify
+  b.bundle()
   .pipe source "fission.js"
   .pipe buffer()
-  .pipe sourcemaps.init()
-  .pipe sourcemaps.write()
-  .pipe gulp.dest 'examples/coffee-require/client/vendor'
-  .pipe gulp.dest 'examples/coffee-browserify/client/vendor'
   .pipe gulp.dest 'dist'
   .pipe uglify()
+  .pipe gulp.dest 'examples/coffee-require/client/vendor'
+  .pipe gulp.dest 'examples/coffee-browserify/client/vendor'
   .pipe rename 'fission.min.js'
   .pipe gulp.dest 'dist'
-  .close()
 
 gulp.task 'default', ['coffee', 'test', 'watch']

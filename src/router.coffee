@@ -6,7 +6,7 @@ renderView = (opt={}, cb) ->
   if typeof opt.view is 'function'
     opt.view = opt.view opt.args
     return renderView opt, cb
-  else    
+  else
     React.renderComponent opt.view, opt.el
     return cb()
 

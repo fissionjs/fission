@@ -21,6 +21,8 @@
   },
   "devDependencies": {
     "autoprefixer-stylus": "^0.1.0",
+    "browserify": "*",
+    "coffeeify": "*",
     "gulp": "^3.5.0",
     "gulp-autowatch": "0.0.1",
     "gulp-cached": "^0.0.3",
@@ -45,7 +47,9 @@
     "nodemon": "^1.0.14",
     "rimraf": "^2.2.5",
     "should": "^4.0.4",
-    "supertest": "^0.13.0"
+    "supertest": "^0.13.0",
+    "vinyl-buffer": "0.0.0",
+    "vinyl-source-stream": "^0.1.1"
   },
   "scripts": {
     "test": "NODE_ENV=testing mocha --recursive --reporter spec --compilers coffee:coffee-script/register ./server/test",

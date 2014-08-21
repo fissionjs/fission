@@ -4,14 +4,18 @@ jade = require 'gulp-jade'
 gutil = require 'gulp-util'
 cache = require 'gulp-cached'
 jshint = require 'gulp-jshint'
-coffee = require 'gulp-coffee'
 stylus = require 'gulp-stylus'
 uglify = require 'gulp-uglify'
 concat = require 'gulp-concat'
 plumber = require 'gulp-plumber'
 reload = require 'gulp-livereload'
-coffeeify = require 'gulp-coffeeify'
 autowatch = require 'gulp-autowatch'
+
+source = require 'vinyl-source-stream'
+buffer = require 'vinyl-buffer'
+
+coffeeify = require 'coffeeify'
+browserify = require 'browserify'
 
 
 # paths
@@ -28,11 +32,18 @@ gulp.task 'server', (cb) ->
 
 # javascript
 gulp.task 'coffee', ->
-  gulp.src paths.coffeeSrc
-    .pipe plumber()
-    .pipe coffeeify()
+    bCache = {}
+    b = browserify paths.coffeeSrc,
+      debug: true
+      insertGlobals: false
+      cache: bCache
+      extensions: ['.coffee']
+    b.transform coffeeify
+    b.bundle()
+    .pipe source "start.js"
+    .pipe buffer()
     .pipe gulp.dest './public'
-    .pipe reload()
+    #.pipe reload()
 
 # styles
 gulp.task 'stylus', ->

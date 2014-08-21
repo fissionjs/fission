@@ -19,12 +19,10 @@
     "react": "^0.10.0"
   },
   "devDependencies": {
-    "coffeeify": "^0.7.0",
+    "browserify": "*",
+    "coffeeify": "*",
     "domino": "^1.0.17",
     "gulp": "^3.8.6",
-    "vinyl-buffer": "0.0.0",
-    "vinyl-source-stream": "^0.1.1",
-    "watchify": "^0.10.2",
     "gulp-autowatch": "0.0.1",
     "gulp-coffeeify": "^0.1.2",
     "gulp-concat": "^2.3.4",
@@ -41,7 +39,9 @@
     "mocha": "^1.20.1",
     "mocha-phantomjs": "^3.5.0",
     "phantomjs": "^1.9.7-15",
-    "should": "^4.0.4"
+    "should": "^4.0.4",
+    "vinyl-buffer": "0.0.0",
+    "vinyl-source-stream": "^0.1.1"
   },
   "scripts": {
     "test": "gulp test && NODE_ENV=testing mocha-phantomjs ./test/browser/index.html"
