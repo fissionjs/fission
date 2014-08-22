@@ -2,6 +2,7 @@
   define(function(require) {
     var middleware, router, _ref;
     _ref = require('vendor/fission'), router = _ref.router, middleware = _ref.middleware;
+    console.log(router);
     router.config({
       click: true,
       dispatch: true,

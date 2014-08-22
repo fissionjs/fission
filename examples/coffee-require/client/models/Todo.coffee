@@ -1,10 +1,10 @@
 define (require) ->
 
-  #fission = require 'vendor/fission'
-  
-  #console.log fission
+  fission = require 'vendor/fission'
 
-  #fission.model
-  #  props:
-  #    text: 'string'
- 
+  console.log fission
+
+  fission.model
+    props:
+      text: 'string'
+

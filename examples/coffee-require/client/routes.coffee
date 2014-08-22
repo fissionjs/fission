@@ -2,7 +2,9 @@ define (require) ->
 
   {router, middleware} = require 'vendor/fission'
 
-  router.config 
+  console.log router
+
+  router.config
     click: true
     dispatch: true
     popstate: true
