@@ -56,8 +56,8 @@ gulp.task 'coffee', ->
   .pipe buffer()
   .pipe gulp.dest 'dist'
   .pipe uglify()
-  .pipe gulp.dest 'examples/coffee-require/client/vendor'
   .pipe gulp.dest 'examples/coffee-browserify/client/vendor'
+  .pipe gulp.dest 'examples/coffee-require/client/vendor'
   .pipe rename 'fission.min.js'
   .pipe gulp.dest 'dist'
 
