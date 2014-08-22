@@ -1,7 +1,11 @@
 Collection = require 'ampersand-collection'
 underscoreMixin = require 'ampersand-collection-underscore-mixin'
+app = {}
 
 module.exports = (model) ->
+
+  if !app.sync?
+    app.sync = require 'ampersand-collection-rest-mixin'
 
   # just a collection wrapper
   if model.isCollection
@@ -9,8 +13,16 @@ module.exports = (model) ->
 
   #TODO: figure out best way to do model check
   else
-    col = Collection.extend underscoreMixin,
+
+    conf = 
       model: model
+
+    inst = new model()
+    
+    if inst.url?
+      conf.url = inst.url
+
+    col = Collection.extend underscoreMixin, app.sync, conf
 
       # TODO deal with sync option translation
       #url: inst.urlRoot

@@ -43,6 +43,8 @@
       },
       render: function() {
         var done;
+        console.log(this.collection);
+        console.log(this.items);
         done = this.collection.filter(function(todo) {
           return todo.get('done');
         });

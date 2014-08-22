@@ -1,12 +1,11 @@
 define (require) ->
   
   Fission = require 'vendor/fission'
-  routes = require './routes'
-
-  console.log "start"
   console.log Fission
+  routes = require './routes'
+  console.log "start"
+  Fission.start
+    routes: routes
+    #sync: plugin
 
-  #fission = Fission
-  #  routes: routes
-
-  #fission.start()
+  #return Fission
