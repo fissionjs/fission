@@ -6,7 +6,12 @@
     return fission.model({
       props: {
         text: 'string'
+<<<<<<< HEAD
+      },
+      url: '/v1/todos'
+=======
       }
+>>>>>>> upstream/master
     });
   });
 

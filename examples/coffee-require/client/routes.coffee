@@ -2,14 +2,12 @@ define (require) ->
 
   {router, middleware} = require 'vendor/fission'
 
-  console.log router
+  #router.config 
+  #  click: true
+  #  dispatch: true
+  #  popstate: true
 
-  router.config
-    click: true
-    dispatch: true
-    popstate: true
-
-  router.route '/foo',
+  router.route '/',
     title: "Welcome"
     view: require 'pages/Todo/Todo.view'
     el: 'content'

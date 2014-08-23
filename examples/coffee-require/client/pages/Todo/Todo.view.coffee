@@ -29,6 +29,9 @@ define (require) ->
 
     render: -> 
 
+      console.log @collection
+      console.log @items
+
       done = @collection.filter (todo) -> todo.get('done')
 
       div {},
