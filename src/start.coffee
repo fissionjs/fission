@@ -1,8 +1,8 @@
 router = require './router'
 
 module.exports = ({sync, routes}) ->
-  
-  #if sync? 
+
+  #if sync?
   #  inject sync strategy
 
   if routes?

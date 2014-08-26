@@ -14,11 +14,11 @@ module.exports = (model) ->
   #TODO: figure out best way to do model check
   else
 
-    conf = 
+    conf =
       model: model
 
     inst = new model()
-    
+
     if inst.url?
       conf.url = inst.url
 
