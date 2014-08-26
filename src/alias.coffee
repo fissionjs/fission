@@ -13,5 +13,5 @@ module.exports = (config) ->
       config[v] ?= config[k]
 
     config.mixins ?= []
-    
+
     return config

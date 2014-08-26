@@ -32,3 +32,38 @@ describe '#model', ->
     inst.set lastName: 'Nash'
 
     done()
+
+  it 'should not contain elements if not defined in model.props', (done) ->
+
+    m = model
+      props:
+        firstName: 'string'
+        lastName: 'string'
+    inst = new m
+      firstName: 'Larry'
+      lastName: 'Page'
+      age: '50'
+    inst.firstName.should.equal 'Larry'
+    inst.lastName.should.equal 'Page'
+    should.not.exist inst.age
+
+    done()
+
+  it 'should return an error if error', (done) ->
+    m = model
+      props:
+        firstName: 'string'
+        lastName: 'string'
+    inst = new m
+      firstName: 'Larry'
+      lastName: 'Page'
+    inst.on 'error', (err) ->
+      err.should.not.be.null
+
+    inst.sync = (method, model, options) ->
+      options.error()
+
+    inst.save()
+    inst.fetch()
+
+    done()

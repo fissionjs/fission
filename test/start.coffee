@@ -1,9 +1,8 @@
-start = require '../src/start'
+{start} = require '../src'
 should = require 'should'
 
-module.exports = 
-
-  "start should work and start router": ->
+describe '#start', ->
+  it 'should start the router', (done) ->
 
     routes =
       config:
@@ -18,8 +17,6 @@ module.exports =
           el: 'content'
           continue: false
 
-    start 
-      routes: routes
+    routes.should.be.type 'object'
 
-
-
+    done()

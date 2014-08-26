@@ -1,5 +1,5 @@
 module.exports =
-  
+
   listenTo: (ee, event, listener) ->
     ee.on event, listener
     return this
