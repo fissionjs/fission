@@ -1,6 +1,9 @@
 fission = require '../vendor/fission'
 
-module.exports = ->
+module.exports =
+
   fission.model
-    name: 'Todo'
-    url: '/v1/todo'
+    props:
+      text: 'string'
+    url: '/v1/todos'
+ 
