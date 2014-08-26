@@ -1,5 +1,6 @@
-{model} = require '../src'
+Model = require 'ampersand-model'
 should = require 'should'
+{model} = require '../src'
 
 describe '#model', ->
   it 'should produce a model', (done) ->
@@ -19,6 +20,7 @@ describe '#model', ->
       firstName: 'Steve'
       lastName: 'Jobz'
 
+    inst.should.be.instanceOf Model
     inst.firstName.should.equal 'Steve'
     inst.lastName.should.equal 'Jobz'
 

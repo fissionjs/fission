@@ -12,7 +12,7 @@ module.exports = (config) ->
       # model instance view
       else if @props.params?.id?
         @model = new config.model
-        @model.set(@model.idAttribute, @props.params.id)
+        @model.id = @props.params.id
         @listenTo @model, 'change', =>
           @forceUpdate()
         @model.fetch()
