@@ -1,4 +1,4 @@
-fission = require '../app'
+fission = require '../vendor/fission'
 
 console.log fission
 

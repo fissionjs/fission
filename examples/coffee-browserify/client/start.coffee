@@ -1,7 +1,9 @@
 fission = require './vendor/fission'
 routes = require './routes'
 
-Fission = fission
+console.log fission
+
+fission.start
   routes: routes
   #sync: 
   #  plugin: plugin

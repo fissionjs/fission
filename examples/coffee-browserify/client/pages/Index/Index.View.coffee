@@ -1,8 +1,6 @@
-###
-fission = require '../../app'
-React = fission.React
+fission = require '../../vendor/fission'
 Todo = require '../../models/Todo'
-{div, h1, h3, a, button, br, span, input, img} = React.DOM
+{div, h1, h3, a, button, br, span, input, img} = fission.React.DOM
 
 itemView = fission.modelView
   model: Todo
@@ -18,9 +16,8 @@ itemView = fission.modelView
         style = {textDecoration: 'line-through'}
       span {style: style}, @model.get 'text'
       a {href: '#', onClick: @remove}, ' x'
-###
 
-module.exports = (fission) ->
+module.exports = 
 
   fission.collectionView
     model: Todo

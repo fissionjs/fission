@@ -32,7 +32,7 @@ gulp.task 'coffee', ->
     .pipe source "start.js"
     .pipe buffer()
     .pipe gulp.dest './public'
-    #.pipe reload()
+    .pipe reload()
 
 gulp.task 'watch', ->
   autowatch gulp, paths

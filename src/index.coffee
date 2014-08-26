@@ -1,12 +1,22 @@
-router = require './router'
-#fission = require './fission'
+module.exports =
 
-module.exports = ({sync, routes}) ->
-  
-  #if sync? 
-  #  inject sync strategy
+  start: require './start'
+  router: require './router'
 
-  if routes?
-    router.route path, conf for path, conf of routes.routes
-    router.use middleware for middleware in routes.use?
-    router.start routes.config
+  model: require './model'
+  view: require './view'
+  modelView: require './modelView'
+  collectionView: require './collectionView'
+
+  createCollection: require './createCollection'
+  alias: require './alias'
+
+  middleware:
+    auth:    require './middleware/auth'
+    clearFB: require './middleware/clearFB'
+    log:     require './middleware/log'
+
+  mixins:
+    Listener: require './ListenerMixin'
+
+  React: require 'react'
