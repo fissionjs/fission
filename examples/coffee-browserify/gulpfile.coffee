@@ -12,6 +12,7 @@ browserify = require 'browserify'
 # paths
 paths =
   coffeeSrc: './client/start.coffee'
+  coffee: './client/**/*.coffee'
   html: './client/*.html'
   public: './public'
 
@@ -31,11 +32,13 @@ gulp.task 'coffee', ->
     .pipe source "start.js"
     .pipe buffer()
     .pipe gulp.dest './public'
-    #.pipe reload()
+    .pipe reload()
+
 gulp.task 'watch', ->
   autowatch gulp, paths
 
 gulp.task 'html', ->
   gulp.src paths.html
   .pipe gulp.dest paths.public
+
 gulp.task 'default', ['coffee', 'html', 'server', 'watch']

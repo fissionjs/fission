@@ -1,23 +1,23 @@
-React = require 'react'
 fission = require '../../vendor/fission'
 Todo = require '../../models/Todo'
-{div, h1, h3, a, button, br, span, input, img} = React.DOM
+{div, h1, h3, a, button, br, span, input, img} = fission.React.DOM
 
-module.exports = ->
-  itemView = fission.modelView
-    model: Todo
-    remove: -> @model.destroy()
-    toggle: ->
-      @model.set 'done', !@model.get('done')
-      @model.save()
-    render: ->
-      div {},
-        input {type: 'checkbox', onClick: @toggle, defaultChecked: @model.get('done')}
-        style = {}
-        if @model.get 'done'
-          style = {textDecoration: 'line-through'}
-        span {style: style}, @model.get 'text'
-        a {href: '#', onClick: @remove}, ' x'
+itemView = fission.modelView
+  model: Todo
+  remove: -> @model.destroy()
+  toggle: ->
+    @model.set 'done', !@model.get('done')
+    @model.save()
+  render: ->
+    div {},
+      input {type: 'checkbox', onClick: @toggle, defaultChecked: @model.get('done')}
+      style = {}
+      if @model.get 'done'
+        style = {textDecoration: 'line-through'}
+      span {style: style}, @model.get 'text'
+      a {href: '#', onClick: @remove}, ' x'
+
+module.exports = 
 
   fission.collectionView
     model: Todo

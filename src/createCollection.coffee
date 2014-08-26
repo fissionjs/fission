@@ -18,14 +18,9 @@ module.exports = (model) ->
       model: model
 
     inst = new model()
-
-    if inst.url?
-      conf.url = inst.url
+    conf.url = inst.url()
 
     col = Collection.extend underscoreMixin, app.sync, conf
-
-      # TODO deal with sync option translation
-      #url: inst.urlRoot
 
   #else
   #  throw new Error "fission#createCollection: Model or Collection specified invalid: #{model}"

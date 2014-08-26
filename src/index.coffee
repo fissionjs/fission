@@ -1,12 +1,12 @@
 module.exports =
 
+  start: require './start'
   router: require './router'
 
   model: require './model'
   view: require './view'
   modelView: require './modelView'
   collectionView: require './collectionView'
-  start: require './start'
 
   createCollection: require './createCollection'
   alias: require './alias'

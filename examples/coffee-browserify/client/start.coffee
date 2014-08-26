@@ -1,5 +1,10 @@
-router = require './router'
-router.start
-  click: true
-  dispatch: true
-  popstate: true
+fission = require './vendor/fission'
+routes = require './routes'
+
+console.log fission
+
+fission.start
+  routes: routes
+  #sync: 
+  #  plugin: plugin
+  #  urlRoot: '/v1' 

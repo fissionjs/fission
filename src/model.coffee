@@ -8,8 +8,4 @@ module.exports = (model) ->
 
   m = Model.extend model
 
-  #,
-  #  modelType: model.name
-  #m.prototype.getType = -> "model"
-
   return m
