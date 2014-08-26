@@ -1,7 +1,6 @@
+###
 fission = require '../../app'
-React = fission
-console.log React
-console.log __dirname
+React = fission.React
 Todo = require '../../models/Todo'
 {div, h1, h3, a, button, br, span, input, img} = React.DOM
 
@@ -19,27 +18,28 @@ itemView = fission.modelView
         style = {textDecoration: 'line-through'}
       span {style: style}, @model.get 'text'
       a {href: '#', onClick: @remove}, ' x'
-
-  module.exports = 
-    fission.collectionView
-      model: Todo
-      itemView: itemView
-      addTodo: (e) ->
-        if e.which is 13
-          @collection.create text: e.target.value, done: false
-          e.target.value = ''
-
-      render: ->
-
-        done = @collection.filter (todo) -> todo.get('done')
-
-        div {},
-          h1 {}, 'todos'
-          input {onKeyDown: @addTodo, type: 'text', placeholder: 'What needs to be done?'}
-
-          @items.map (item) ->
-            div {}, item
-
-          div {}, "#{@items.length-done.length} items left"
-          div {}, "clear completed (#{done.length})"
 ###
+
+module.exports = (fission) ->
+
+  fission.collectionView
+    model: Todo
+    itemView: itemView
+    addTodo: (e) ->
+      if e.which is 13
+        @collection.create text: e.target.value, done: false
+        e.target.value = ''
+
+    render: ->
+
+      done = @collection.filter (todo) -> todo.get('done')
+
+      div {},
+        h1 {}, 'todos'
+        input {onKeyDown: @addTodo, type: 'text', placeholder: 'What needs to be done?'}
+
+        @items.map (item) ->
+          div {}, item
+
+        div {}, "#{@items.length-done.length} items left"
+        div {}, "clear completed (#{done.length})"

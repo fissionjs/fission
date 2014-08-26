@@ -1,5 +1,6 @@
 page = require 'page'
 React = require 'react'
+fission = require './fission'
 
 app = {}
 renderView = (opt={}, cb) ->
@@ -7,7 +8,7 @@ renderView = (opt={}, cb) ->
     opt.view = opt.view opt.args
     return renderView opt, cb
   else
-    React.renderComponent opt.view, opt.el
+    React.renderComponent opt.view.bind(null, fission), opt.el
     return cb()
 
 app.createRouteHandler = (opt) ->

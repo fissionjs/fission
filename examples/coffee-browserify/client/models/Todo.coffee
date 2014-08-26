@@ -1,4 +1,6 @@
-fission = require '../vendor/fission'
+fission = require '../app'
+
+console.log fission
 
 module.exports =
 
