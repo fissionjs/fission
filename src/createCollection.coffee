@@ -4,8 +4,8 @@ app = {}
 
 module.exports = (model) ->
 
-  if !app.sync?
-    app.sync = require 'ampersand-collection-rest-mixin'
+  if !model.sync?
+    model.sync = window.Fission.sync
 
   # just a collection wrapper
   if model.isCollection
@@ -20,7 +20,7 @@ module.exports = (model) ->
     inst = new model()
     conf.url = inst.url()
 
-    col = Collection.extend underscoreMixin, app.sync, conf
+    col = Collection.extend underscoreMixin, model.sync, conf
 
   #else
   #  throw new Error "fission#createCollection: Model or Collection specified invalid: #{model}"

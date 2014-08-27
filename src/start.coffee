@@ -3,10 +3,12 @@ router = require './router'
 
 module.exports = ({sync, routes}) ->
  
-  window.FissionApp =  
-    get: ->
-      sync: sync
-      foo: 'bar'
+  if !sync?
+    sync = require 'ampersand-collection-rest-mixin'
+
+  window.Fission =  
+    sync: sync
+    foo: 'bar'
 
   #if sync? 
   #  inject sync strategy
