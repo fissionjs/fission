@@ -6,10 +6,6 @@ module.exports = ({sync, routes}) ->
   if !sync?
     sync = require 'ampersand-collection-rest-mixin'
 
-  window.Fission =  
-    sync: sync
-    foo: 'bar'
-
   #if sync? 
   #  inject sync strategy
 

@@ -1,22 +1,26 @@
 module.exports =
 
-  start: require './start'
-  router: require './router'
+  class Fission
 
-  model: require './model'
-  view: require './view'
-  modelView: require './modelView'
-  collectionView: require './collectionView'
+    constructor: ({@sync}) ->
 
-  createCollection: require './createCollection'
-  alias: require './alias'
+    start: require './start'
+    router: require './router'
 
-  middleware:
-    auth:    require './middleware/auth'
-    clearFB: require './middleware/clearFB'
-    log:     require './middleware/log'
+    model: require './model'
+    view: require './view'
+    modelView: require './modelView'
+    collectionView: require './collectionView'
 
-  mixins:
-    Listener: require './ListenerMixin'
+    createCollection: require './createCollection'
+    alias: require './alias'
 
-  React: require 'react'
+    middleware:
+      auth:    require './middleware/auth'
+      clearFB: require './middleware/clearFB'
+      log:     require './middleware/log'
+
+    mixins:
+      Listener: require './ListenerMixin'
+
+    React: require 'react'
