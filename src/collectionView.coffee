@@ -19,8 +19,11 @@ module.exports = (config) ->
       unless @collection?
         ctor = createCollection config.model
         @collection = new ctor
-        @collection.fetch success: =>
-          @renderItems()
+        @collection.fetch
+          success: (data) =>
+            @renderItems()
+          error: (err) =>
+            console.log 'fetch error ', err
 
           @listenTo @collection, 'add change remove', (e) =>
             @renderItems()
