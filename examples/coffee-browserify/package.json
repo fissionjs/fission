@@ -19,9 +19,6 @@
     "gulp": "^3.5.0",
     "gulp-autowatch": "0.0.1",
     "gulp-livereload": "^2.1.0",
-    "mocha": "^1.17.0",
-    "nib": "^1.0.2",
-    "should": "^4.0.4",
     "vinyl-buffer": "0.0.0",
     "vinyl-source-stream": "^0.1.1"
   },
