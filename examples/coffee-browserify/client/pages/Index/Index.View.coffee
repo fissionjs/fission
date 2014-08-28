@@ -19,7 +19,7 @@ itemView = fission.modelView
       span {style: style}, @model.get 'text'
       a {href: '#', onClick: @remove}, ' x'
 
-module.exports = 
+module.exports =
 
   fission.collectionView
     model: Todo
