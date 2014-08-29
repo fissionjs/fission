@@ -1,2 +1,47 @@
+
+*, *:before, *:after
+  margin 0
+  padding 0
+  -webkit-box-sizing border-box
+  box-sizing border-box
+
+a
+  text-decoration none
+  color #171717
+
 body
-  background #171717
+  background #efefef
+  font-size 1em
+  font-family 'Raleway', sans-serif
+.content
+  padding 5%
+  width 50%
+  margin-left 25%
+  .title
+    padding 10px
+    border 1px solid #efefef
+    width 100%
+    background #fafafa
+  .clear-all
+    cursor pointer
+  .items
+    position relative
+    width 100%
+    text-align center
+    display inline-block
+    .item
+      position relative
+      width 100%
+      height 35px
+      background #fafafa
+      padding 10px
+      margin-top 5px
+      .checkbox
+        position absolute
+        left 10px
+      .remove
+        position absolute
+        right 10px
+        color red
+      .done
+        text-decoration line-through
