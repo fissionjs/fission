@@ -1,18 +1,9 @@
-createCollection = require './createCollection'
-
 module.exports =
 
   class Fission
 
     constructor: (@opts) ->
-      console.log "opts . sync"
-      console.log @opts.sync
 
-    bar: require './bar'
-    foo: ->
-      console.log @opts
-
-    start: require './start'
     router: require './router'
 
     model: require './model'

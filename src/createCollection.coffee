@@ -1,10 +1,7 @@
-#Collection = require 'ampersand-collection'
-#underscoreMixin = require 'ampersand-collection-underscore-mixin'
+Collection = require 'ampersand-collection'
+underscoreMixin = require 'ampersand-collection-underscore-mixin'
 
 module.exports = (model) ->
-
-  console.log "optz"
-  console.log @opts
 
   unless model.sync?
     model.sync = require 'ampersand-collection-rest-mixin'

@@ -1,5 +1,4 @@
 ListenerMixin = require './ListenerMixin'
-view = require './view'
 
 module.exports = (config) ->
 
@@ -23,4 +22,4 @@ module.exports = (config) ->
 
   config.mixins ?= []
   config.mixins.push ModelViewMixin
-  return view config
+  return @view config
