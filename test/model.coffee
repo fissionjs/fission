@@ -1,11 +1,11 @@
 Model = require 'ampersand-model'
 should = require 'should'
-{model} = require '../src'
+fission = require './fixtures/fissionInstance'
 
 describe '#model', ->
   it 'should produce a model', (done) ->
 
-    m = model
+    m = fission.model
       props:
         firstName: 'string'
         lastName: 'string'
@@ -35,7 +35,7 @@ describe '#model', ->
 
   it 'should not contain elements if not defined in model.props', (done) ->
 
-    m = model
+    m = fission.model
       props:
         firstName: 'string'
         lastName: 'string'
@@ -50,7 +50,7 @@ describe '#model', ->
     done()
 
   it 'should return an error if error', (done) ->
-    m = model
+    m = fission.model
       props:
         firstName: 'string'
         lastName: 'string'
