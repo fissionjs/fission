@@ -1,11 +1,11 @@
-{view} = require '../src'
+fission = require './fixtures/fissionInstance'
 should = require 'should'
 
 describe "#view", ->
 
   it "should produce the right output", (done) ->
 
-    v = view
+    v = fission.view
       init: ->
       mounting: ->
       mounted: ->

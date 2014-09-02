@@ -1,11 +1,10 @@
 Collection = require 'ampersand-collection'
 underscoreMixin = require 'ampersand-collection-underscore-mixin'
-app = {}
 
 module.exports = (model) ->
 
-  if !model.sync?
-    model.sync = window.Fission.sync
+  unless model.sync?
+    model.sync = require 'ampersand-collection-rest-mixin'
 
   # just a collection wrapper
   if model.isCollection

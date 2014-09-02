@@ -1,4 +1,4 @@
-fission = require '../vendor/fission'
+fission = require '../app'
 
 module.exports =
 

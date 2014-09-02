@@ -1,8 +1,8 @@
-view = require './view'
-createCollection = require './createCollection'
 ListenerMixin = require './ListenerMixin'
 
 module.exports = (config) ->
+
+  ctor = @createCollection config.model
 
   CollectionViewMixin =
     mixins: [ListenerMixin]
@@ -17,7 +17,6 @@ module.exports = (config) ->
     componentWillMount: ->
       @items ?= []
       unless @collection?
-        ctor = createCollection config.model
         @collection = new ctor
         @collection.fetch
           success: (data) =>
@@ -39,4 +38,4 @@ module.exports = (config) ->
 
   config.mixins ?= []
   config.mixins.push CollectionViewMixin
-  return view config
+  return @view config

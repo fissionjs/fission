@@ -1,5 +1,4 @@
-modelView = require '../src/modelView'
-model = require '../src/model'
+fission = require './fixtures/fissionInstance'
 should = require 'should'
 
 React = null
@@ -7,14 +6,14 @@ utils = null
 
 describe "#modelView", ->
 
-  m = model
+  m = fission.model
     url: '/v1/foo'
     name: 'foo'
     fetch: ->
       set
         foo: 'bar'
 
-  v = modelView
+  v = fission.modelView
     model: m
     render: -> console.log "RENDER"
 

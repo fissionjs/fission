@@ -1,8 +1,10 @@
-fission = require './vendor/fission'
-routes = require './routes'
+fission = require './app'
+IndexView = require './pages/Index/Index.View'
 
-fission.start
-  routes: routes
-  #sync: 
-  #  plugin: plugin
-  #  urlRoot: '/v1' 
+fission.router.route '/',
+  title: "Welcome"
+  view: IndexView
+  el: 'content'
+  continue: false
+
+fission.router.start()

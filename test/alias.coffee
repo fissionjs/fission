@@ -1,4 +1,4 @@
-aliasLifecycle = require '../src/alias'
+fission = require './fixtures/fissionInstance'
 
 describe "#Fission.alias", ->
 
@@ -10,7 +10,7 @@ describe "#Fission.alias", ->
       mounted: ->
       unmounting: ->
 
-    config = aliasLifecycle view
+    config = fission.alias view
 
     config.should.have.property 'getInitialState'
     config.should.have.property 'componentWillMount'

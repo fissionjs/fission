@@ -1,4 +1,4 @@
-fission = require '../../vendor/fission'
+fission = require '../../app'
 Todo = require '../../models/Todo'
 {div, h1, h3, a, button, br, span, input, img} = fission.React.DOM
 

@@ -1,17 +1,16 @@
+fission = require './fixtures/fissionInstance'
 should = require 'should'
-createCollection = require '../src/createCollection'
-model = require '../src/model'
 
 describe "#createCollection", ->
 
   it "should return a collection", (done) ->
 
-    m = model
+    m = fission.model
       props:
         firstName: 'string'
         lastName: 'string'
 
-    col = createCollection m
+    col = fission.createCollection m
     inst = new col
 
     inst.isCollection.should.equal true

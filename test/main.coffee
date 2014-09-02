@@ -1,7 +1,6 @@
 fission: require './'
 view: require './view'
 model: require './model'
-start: require './start'
 alias: require './alias'
 modelView: require './modelView'
 createCollection: require './createCollection'
