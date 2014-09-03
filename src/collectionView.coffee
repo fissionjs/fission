@@ -11,7 +11,7 @@ module.exports = (config) ->
         @items = @collection.map (m) =>
           return @itemView
             model: m
-            key: m.id
+            key: m.cid
       @forceUpdate()
 
     componentWillMount: ->
