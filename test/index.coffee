@@ -1,11 +1,9 @@
-Fission = require '../src/index'
+fission = require './fixtures/fissionInstance'
 should = require 'should'
 
 describe "fission", ->
 
   it "should have expected api", (done) ->
-
-    fission = new Fission(sync: -> console.log 'sync')
 
     fission.should.have.property 'router'
     fission.should.have.property 'middleware'

@@ -3,6 +3,7 @@ should = require 'should'
 fission = require './fixtures/fissionInstance'
 
 describe '#model', ->
+
   it 'should produce a model', (done) ->
 
     m = fission.model
