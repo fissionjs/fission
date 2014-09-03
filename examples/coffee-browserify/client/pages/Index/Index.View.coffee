@@ -8,14 +8,15 @@ itemView = fission.modelView
   toggle: ->
     @model.set 'done', !@model.get('done')
     @model.save()
+  check: ->
+    if @model.get 'done'
+      return 'done'
+    return 'notdone'
   render: ->
-    div {},
-      input {type: 'checkbox', onClick: @toggle, defaultChecked: @model.get('done')}
-      style = {}
-      if @model.get 'done'
-        style = {textDecoration: 'line-through'}
-      span {style: style}, @model.get 'text'
-      a {href: '#', onClick: @remove}, ' x'
+    div {className: 'item'},
+      input {className: 'checkbox', type: 'checkbox', onClick: @toggle, defaultChecked: @model.get('done')}
+      span {className: @check()}, @model.get 'text'
+      a {className: 'remove', href: '#', onClick: @remove}, ' x'
 
 module.exports =
 
@@ -31,12 +32,12 @@ module.exports =
 
       done = @collection.filter (todo) -> todo.get('done')
 
-      div {},
+      div {className: 'content'},
         h1 {}, 'todos'
-        input {onKeyDown: @addTodo, type: 'text', placeholder: 'What needs to be done?'}
-
-        @items.map (item) ->
-          div {}, item
+        input {className: 'add-item', onKeyDown: @addTodo, type: 'text', placeholder: 'What needs to be done?'}
+        div {className: 'items'},
+          @items.map (item) ->
+            item
 
         div {}, "#{@items.length-done.length} items left"
         div {}, "clear completed (#{done.length})"

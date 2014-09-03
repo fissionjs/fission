@@ -1,8 +1,9 @@
 path = require 'path'
 gulp = require 'gulp'
+stylus = require 'gulp-stylus'
 uglify = require 'gulp-uglify'
 reload = require 'gulp-livereload'
-autowatch = require 'gulp-autowatch'
+awatch = require 'gulp-autowatch'
 source = require 'vinyl-source-stream'
 buffer = require 'vinyl-buffer'
 
@@ -11,10 +12,11 @@ browserify = require 'browserify'
 
 # paths
 paths =
-  coffeeSrc: './client/start.coffee'
   coffee: './client/**/*.coffee'
   html: './client/*.html'
+  stylus: './client/css/**/*.styl'
   public: './public'
+  coffeeSrc: './client/start.coffee'
 
 gulp.task 'server', (cb) ->
   require './start'
@@ -31,14 +33,20 @@ gulp.task 'coffee', ->
     b.bundle()
     .pipe source "start.js"
     .pipe buffer()
-    .pipe gulp.dest './public'
+    .pipe gulp.dest paths.public
     .pipe reload()
-
-gulp.task 'watch', ->
-  autowatch gulp, paths
 
 gulp.task 'html', ->
   gulp.src paths.html
   .pipe gulp.dest paths.public
 
-gulp.task 'default', ['coffee', 'html', 'server', 'watch']
+gulp.task 'stylus', ->
+  gulp.src paths.stylus
+  .pipe stylus()
+  .pipe gulp.dest paths.public
+  .pipe reload()
+
+gulp.task 'watch', ->
+  awatch gulp, paths
+
+gulp.task 'default', ['coffee', 'html', 'stylus', 'server', 'watch']
