@@ -21,7 +21,4 @@ module.exports = (model) ->
 
     col = Collection.extend underscoreMixin, model.sync, conf
 
-  #else
-  #  throw new Error "fission#createCollection: Model or Collection specified invalid: #{model}"
-
   return col

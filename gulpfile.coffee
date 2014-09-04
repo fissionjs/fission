@@ -5,6 +5,8 @@ sourcemaps = require 'gulp-sourcemaps'
 autowatch  = require 'gulp-autowatch'
 open       = require 'gulp-open'
 mocha      = require 'gulp-mocha'
+coffee     = require 'gulp-coffee'
+coffeelint = require 'gulp-coffeelint'
 
 source     = require 'vinyl-source-stream'
 buffer     = require 'vinyl-buffer'
@@ -42,21 +44,10 @@ gulp.task 'test:browser', ['test'], ->
     .pipe open()
 
 gulp.task 'coffee', ->
-  bCache = {}
-  b = browserify paths.coffeeSrc,
-    standalone: 'fission'
-    debug: true
-    insertGlobals: true
-    cache: bCache
-    extensions: ['.coffee']
-  b.transform coffeeify
-  b.bundle()
-  .pipe source 'fission.js'
-  .pipe buffer()
-  .pipe gulp.dest 'examples/coffee-require/client/vendor'
-  .pipe gulp.dest 'dist'
-  .pipe uglify()
-  .pipe rename 'fission.min.js'
-  .pipe gulp.dest 'dist'
+  gulp.src paths.coffee
+  .pipe coffeelint()
+  .pipe coffeelint.reporter()
+  .pipe coffee()
+  .pipe gulp.dest './lib'
 
 gulp.task 'default', ['coffee', 'test', 'watch']

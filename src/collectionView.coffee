@@ -21,7 +21,7 @@ module.exports = (config) ->
         @collection.fetch
           success: (data) =>
             @renderItems()
-          error: (err) =>
+          error: (err) ->
             console.log 'fetch error ', err
 
           @listenTo @collection, 'add change remove', (e) =>
