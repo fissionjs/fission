@@ -9,8 +9,7 @@ mocha      = require 'gulp-mocha'
 source     = require 'vinyl-source-stream'
 buffer     = require 'vinyl-buffer'
 coffeeify  = require 'coffeeify'
-browserify   = require 'browserify'
-
+browserify = require 'browserify'
 
 
 paths =

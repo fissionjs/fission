@@ -7,4 +7,3 @@ module.exports =
       text: 'string'
       done: 'boolean'
     url: '/v1/todos'
-

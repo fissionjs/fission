@@ -1,46 +1,71 @@
 #Fission [![NPM version][npm-image]][npm-url]  [![Build Status][travis-image]][travis-url]
 
 
-#### Model
+#### Models
 
-model is just a wrapper around backbone model, only difference is you specify *url* vs *urlRoot* simply because i find the latter confusing with the way we use these.  Collections are not needed to be created manually they will be created implicitly/internally at runtime
+Models are just wrappers around [ampersand models](https://github.com/AmpersandJS/ampersand-model)
+Model properties are defined at creation via `props`.
 
 ```js
 
-fission.model({
-  idAttribute: '_id',
-  name: 'Match',
-  url: '/v1/matches'
+var model = fission.model({
+
+  props: {
+    text: 'string',
+    done: 'boolean',
+  },
+  url: '/v1/todos'
 });
+
+model.text = 'Mr Fission';
+model.save();
 
 ```
 
+#### Collections
+Collections are not needed to be created manually they will be created implicitly/internally at runtime.
+
 #### Routing
+
+[Pagejs](http://visionmedia.github.io/page.js/) is used for routing.
 
 ```js
 var router = fission.router;
-
+var MatchesView = require('components/Match/Matches.view');
+var MatchView = require('components/Match/Match.view');
 router.use(fission.middleware.log);
 
 router.route('/', {
-  view: 'components/Match/Matches.view',
+  view: MatchesView,
   el: 'content'
 });
 
 router.route('/match/:id', {
-  view: 'components/Match/Match.view',
+  view: MatchView,
   el: 'content'
 });
 
 ```
+Props **id** is passed into the model as it's id.
 
 #### Collection View
+
 collectionView gets an array of **this.items** - the collections' models rendered into their **itemView**
 
 ```js
 
 var Match = require('models/Match');
-var MatchItem = require('components/MatchItem/MatchItem.view');
+
+var MatchItem = fission.modelView({
+  model: Match,
+  render: function(){
+    div({className: "match"},
+    img({src: this.model.get('content')
+    }));
+
+  }
+
+});
 
 fission.collectionView({
   model: Match,
@@ -58,7 +83,7 @@ fission.collectionView({
 
 #### Model View
 
-render gets **this.model** - a reference to the associated model either when either model or id is passed into **props** or via and *id* **params**
+render gets **this.model** - a reference to the associated model either when model or id is passed into **props** or via *id* **params** from the router.
 
 ```js
 
@@ -68,21 +93,20 @@ fission.modelView({
   model: Match,
 
   dislike: function() {
-    this.model.save({liked: false}, {patch: true});
+    this.model.liked = false;
+    this.model.save();
   },
   like: function() {
-    this.model.save({liked: true}, {patch: true});
+    this.model.liked = true;
+    this.model.save();
   },
   render: function() {
     var user = this.model.get('name');
-    return span(null, 'name: ' + name);
+    return span(null, 'name: ' + user);
   }
 });
 
 ```
-
-
-
 
 [travis-url]: https://travis-ci.org/wearefractal/fission
 [travis-image]: https://travis-ci.org/wearefractal/fission.png?branch=master

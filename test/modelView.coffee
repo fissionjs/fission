@@ -1,9 +1,6 @@
 fission = require './fixtures/fissionInstance'
 should = require 'should'
 
-React = null
-utils = null
-
 describe "#modelView", ->
 
   m = fission.model
