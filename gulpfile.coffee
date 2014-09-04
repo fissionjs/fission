@@ -50,4 +50,22 @@ gulp.task 'coffee', ->
   .pipe coffee()
   .pipe gulp.dest './lib'
 
-gulp.task 'default', ['coffee', 'test', 'watch']
+gulp.task 'amd', ->
+  bCache = {}
+  b = browserify paths.coffeeSrc,
+    standalone: 'fission'
+    debug: true
+    insertGlobals: true
+    cache: bCache
+    extensions: ['.coffee']
+  b.transform coffeeify
+  b.bundle()
+  .pipe source 'fission.js'
+  .pipe buffer()
+  .pipe gulp.dest 'dist'
+  .pipe uglify()
+  .pipe rename 'fission.min.js'
+  .pipe gulp.dest 'dist'
+
+
+gulp.task 'default', ['coffee', 'test', 'amd', 'watch']
