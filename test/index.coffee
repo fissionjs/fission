@@ -17,6 +17,6 @@ describe "fission", ->
     fission.should.have.property 'model'
 
     fission.opts.should.be.instanceof Object
-    fission.opts.sync.should.be.instanceof Function
+    fission.opts.sync.should.be.instanceof Object
 
     done()
