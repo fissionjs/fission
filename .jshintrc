@@ -24,6 +24,7 @@
     "after": false,
     "afterEach": false,
     "window": false,
-    "document": false
+    "document": false,
+    "set": false
   }
 }

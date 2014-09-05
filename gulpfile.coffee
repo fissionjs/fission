@@ -5,32 +5,28 @@ sourcemaps = require 'gulp-sourcemaps'
 autowatch  = require 'gulp-autowatch'
 open       = require 'gulp-open'
 mocha      = require 'gulp-mocha'
-coffee     = require 'gulp-coffee'
-coffeelint = require 'gulp-coffeelint'
+jshint     = require 'gulp-jshint'
 
 source     = require 'vinyl-source-stream'
 buffer     = require 'vinyl-buffer'
-coffeeify  = require 'coffeeify'
 browserify = require 'browserify'
 
 
 paths =
-  coffee: 'src/**/*.coffee'
-  coffeeSrc: './src/index.coffee'
-  test: 'test/main.coffee'
+  js: 'lib/**/*.js'
+  jsSrc: './lib/index.js'
+  test: 'test/main.js'
 
 gulp.task 'watch', ->
   autowatch gulp, paths
 
 gulp.task 'test', ->
   bCache = {}
-  b = browserify './test/main.coffee',
+  b = browserify './test/main.js',
     standalone: 'fission'
     debug: true
     insertGlobals: true
     cache: bCache
-    extensions: ['.coffee']
-  b.transform coffeeify
   b.bundle()
   .pipe source 'main.js'
   .pipe buffer()
@@ -43,22 +39,19 @@ gulp.task 'test:browser', ['test'], ->
   gulp.src './test/browser/index.html'
     .pipe open()
 
-gulp.task 'coffee', ->
-  gulp.src paths.coffee
-  .pipe coffeelint()
-  .pipe coffeelint.reporter()
-  .pipe coffee()
-  .pipe gulp.dest './lib'
+gulp.task 'js', ->
+  gulp.src paths.js
+  .pipe jshint()
+  .pipe jshint.reporter()
+
 
 gulp.task 'amd', ->
   bCache = {}
-  b = browserify paths.coffeeSrc,
+  b = browserify paths.jsSrc,
     standalone: 'fission'
     debug: true
     insertGlobals: true
     cache: bCache
-    extensions: ['.coffee']
-  b.transform coffeeify
   b.bundle()
   .pipe source 'fission.js'
   .pipe buffer()
@@ -68,4 +61,4 @@ gulp.task 'amd', ->
   .pipe gulp.dest 'dist'
 
 
-gulp.task 'default', ['coffee', 'test', 'amd', 'watch']
+gulp.task 'default', ['js', 'test', 'amd', 'watch']
