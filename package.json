@@ -18,7 +18,7 @@
     "react": "^0.10.0"
   },
   "devDependencies": {
-    "browserify": "*",
+    "browserify": "^5.10.1",
     "gulp": "^3.8.6",
     "gulp-autowatch": "0.0.1",
     "gulp-jshint": "^1.7.1",
