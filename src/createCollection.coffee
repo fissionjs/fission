@@ -9,9 +9,7 @@ module.exports = (model) ->
         if @opts.sync.plugin?
           model.sync = @opts.sync.plugin
         else
-          throw new Error 'Invalid sync plugin'
-      else if typeof @opts.sync is 'function'
-        model.sync = @opts.sync
+          model.sync = @opts.sync
       else
         throw new Error 'Invalid sync adapter'
     else
