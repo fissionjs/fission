@@ -4,7 +4,18 @@ underscoreMixin = require 'ampersand-collection-underscore-mixin'
 module.exports = (model) ->
 
   unless model.sync?
-    model.sync = require 'ampersand-collection-rest-mixin'
+    if @opts.sync?
+      if typeof @opts.sync is 'object'
+        if @opts.sync.plugin?
+          model.sync = @opts.sync.plugin
+        else
+          throw new Error 'Invalid sync plugin'
+      else if typeof @opts.sync is 'function'
+        model.sync = @opts.sync
+      else
+        throw new Error 'Invalid sync adapter'
+    else
+      model.sync = require 'ampersand-collection-rest-mixin'
 
   # just a collection wrapper
   if model.isCollection
