@@ -1,4 +1,4 @@
-{start} = require '../src'
+fission = require './fixtures/fissionInstance'
 should = require 'should'
 
 describe '#start', ->

@@ -1,4 +1,4 @@
-Fission = require '../../src/index'
+Fission = require '../../lib/index'
 
 module.exports = new Fission
   sync: -> console.log 'sync'
