@@ -108,8 +108,8 @@ fission.modelView({
 
 ```
 
-[travis-url]: https://travis-ci.org/wearefractal/fission
-[travis-image]: https://travis-ci.org/wearefractal/fission.png?branch=master
+[travis-url]: https://travis-ci.org/fissionjs/fission
+[travis-image]: https://travis-ci.org/fissionjs/fission.png?branch=master
 
 [npm-url]: https://npmjs.org/package/fission
 [npm-image]: http://img.shields.io/npm/v/fission.svg
