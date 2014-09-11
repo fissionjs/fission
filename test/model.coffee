@@ -115,7 +115,6 @@ describe '#model', ->
       props:
         firstName: 'string'
         lastName: 'string'
-      url: '/api/v2/users'
     inst = new m
       firstName: 'Larry'
       lastName: 'Page'

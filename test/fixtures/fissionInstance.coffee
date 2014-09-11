@@ -1,7 +1,7 @@
 Fission = require '../../src/index'
 
 module.exports = new Fission
-  sync: 
+  sync:
     create: ->
     fetch: ->
     sync: ->
