@@ -7,5 +7,5 @@ module.exports = (model) ->
   delete model.url
 
   m = Model.extend model
-
+  
   return m

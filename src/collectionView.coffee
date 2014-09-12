@@ -2,6 +2,19 @@ ListenerMixin = require './ListenerMixin'
 
 module.exports = (config) ->
 
+  if config.model.sync
+      sync = config.model.sync
+    else if @opts.sync?
+      if typeof @opts.sync is 'function'
+        sync = @opts.sync
+      else if typeof @opts.sync is 'object'
+        if @opts.sync.plugin?
+          sync = @opts.sync.plugin
+        else
+          throw new Error 'Invalid sync adapter'
+    else
+      sync = require 'ampersand-sync'
+
   ctor = @createCollection config.model
 
   CollectionViewMixin =
@@ -18,6 +31,7 @@ module.exports = (config) ->
       @items ?= []
       unless @collection?
         @collection = new ctor
+        @collection.sync = sync
         @collection.fetch
           success: (data) =>
             @renderItems()

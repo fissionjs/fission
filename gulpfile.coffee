@@ -17,6 +17,7 @@ browserify = require 'browserify'
 paths =
   coffee: 'src/**/*.coffee'
   coffeeSrc: './src/index.coffee'
+  jsSrc: './lib/index.js'
   test: 'test/main.coffee'
 
 gulp.task 'watch', ->
@@ -30,7 +31,7 @@ gulp.task 'test', ->
     insertGlobals: true
     cache: bCache
     extensions: ['.coffee']
-  b.transform coffeeify
+  b.transform coffeeify 
   b.bundle()
   .pipe source 'main.js'
   .pipe buffer()
@@ -45,8 +46,8 @@ gulp.task 'test:browser', ['test'], ->
 
 gulp.task 'coffee', ->
   gulp.src paths.coffee
-  .pipe coffeelint()
-  .pipe coffeelint.reporter()
+  #.pipe coffeelint()
+  #.pipe coffeelint.reporter()
   .pipe coffee()
   .pipe gulp.dest './lib'
 

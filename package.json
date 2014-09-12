@@ -10,11 +10,17 @@
   "author": "Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
   "main": "./index.js",
   "dependencies": {
+    "ampersand-class-extend": "^1.0.1",
+    "ampersand-sync-adapter": "*",
     "ampersand-collection": "^1.3.13",
     "ampersand-collection-rest-mixin": "*",
     "ampersand-collection-underscore-mixin": "^1.0.1",
     "ampersand-model": "^4.0.1",
+    "ampersand-sync": "^2.0.4",
+    "backbone-events-standalone": "^0.2.4",
     "coffee-script": "^1.7.1",
+    "extend-object": "^1.0.0",
+    "is-array": "^1.0.1",
     "page": "^1.3.7",
     "react": "^0.10.0"
   },

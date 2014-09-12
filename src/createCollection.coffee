@@ -1,19 +1,8 @@
 Collection = require 'ampersand-collection'
 underscoreMixin = require 'ampersand-collection-underscore-mixin'
+adapter = require 'ampersand-sync-adapter'
 
 module.exports = (model) ->
-
-  unless model.sync?
-    if @opts.sync?
-      if typeof @opts.sync is 'object'
-        if @opts.sync.plugin?
-          model.sync = @opts.sync.plugin
-        else
-          model.sync = @opts.sync
-      else
-        throw new Error 'Invalid sync adapter'
-    else
-      model.sync = require 'ampersand-collection-rest-mixin'
 
   # just a collection wrapper
   if model.isCollection
@@ -28,6 +17,6 @@ module.exports = (model) ->
     inst = new model()
     conf.url = inst.url()
 
-    col = Collection.extend underscoreMixin, model.sync, conf
+    col = Collection.extend underscoreMixin, adapter, conf
 
   return col
