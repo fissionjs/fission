@@ -1,5 +1,5 @@
 fission: require './'
-start: require './start'
+router: require './router'
 view: require './view'
 model: require './model'
 alias: require './alias'
