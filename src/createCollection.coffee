@@ -11,11 +11,10 @@ module.exports = (model) ->
   #TODO: figure out best way to do model check
   else
 
+    inst = new model()
     conf =
       model: model
-
-    inst = new model()
-    conf.url = inst.url()
+      url: inst.url()
 
     col = Collection.extend underscoreMixin, adapter, conf
 
