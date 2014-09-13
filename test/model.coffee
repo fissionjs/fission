@@ -145,9 +145,12 @@ describe '#model', ->
       props:
         firstName: 'string'
         lastName: 'string'
+    m.age = '23'
+
     inst = new m
       firstName: 'Larry'
       lastName: 'Page'
+      age: '29'
 
     inst.firstName.should.equal 'Larry'
 
@@ -155,6 +158,5 @@ describe '#model', ->
       should.not.exist inst.age
       done()
 
-    inst.age = '23'
     inst.firstName = 'Ellen'
     inst.save()
