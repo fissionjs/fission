@@ -156,4 +156,5 @@ describe '#model', ->
       done()
 
     inst.age = '23'
+    inst.firstName = 'Ellen'
     inst.save()
