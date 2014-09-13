@@ -152,12 +152,8 @@ describe '#model', ->
     inst.firstName.should.equal 'Larry'
 
     inst.on 'change', (data) ->
-      data.firstName.should.equal 'Ellen'
-      inst.firstName.should.equal 'Ellen'
       should.not.exist inst.age
-      should.not.exist data.age
       done()
 
-    inst.firstName = 'Ellen'
     inst.age = '23'
     inst.save()
