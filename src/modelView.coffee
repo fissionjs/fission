@@ -8,10 +8,13 @@ module.exports = (config) ->
       # item view
       if @props.model?
         @model = @props.model
+        #@model.sync = sync
+
       # model instance view
       else if @props.params?.id?
         @model = new config.model
         @model.id = @props.params.id
+        #@model.sync = sync
         @listenTo @model, 'change', =>
           @forceUpdate()
         @model.fetch()
