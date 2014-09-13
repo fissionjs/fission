@@ -125,3 +125,38 @@ describe '#model', ->
 
     inst.firstName = 'Ellen'
     inst.save()
+
+  it 'should not save props not set in model.props', (done) ->
+    m = fission.model
+      props:
+        firstName: 'string'
+        lastName: 'string'
+    inst = new m
+      firstName: 'Larry'
+      lastName: 'Page'
+      age: '23'
+
+    inst.firstName.should.equal 'Larry'
+    should.not.exist inst.age
+    done()
+
+  it 'should not save props proxies not set in model.props', (done) ->
+    m = fission.model
+      props:
+        firstName: 'string'
+        lastName: 'string'
+    m.age = '23'
+
+    inst = new m
+      firstName: 'Larry'
+      lastName: 'Page'
+      age: '29'
+
+    inst.firstName.should.equal 'Larry'
+
+    inst.on 'change', (data) ->
+      should.not.exist inst.age
+      done()
+
+    inst.firstName = 'Ellen'
+    inst.save()
