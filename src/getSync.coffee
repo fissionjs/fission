@@ -10,7 +10,7 @@ module.exports = (model) ->
           sync = @opts.sync.plugin
         else
           throw new Error 'Invalid sync adapter'
-    else
-      sync = require 'ampersand-sync'
+  else
+    sync = require 'ampersand-sync'
 
   return sync
