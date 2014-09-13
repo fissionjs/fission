@@ -161,4 +161,3 @@ describe '#model', ->
     inst.firstName = 'Ellen'
     inst.age = '23'
     inst.save()
-###
