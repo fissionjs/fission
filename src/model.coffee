@@ -6,6 +6,8 @@ module.exports = (model) ->
   model.urlRoot = model.url
   delete model.url
 
+  model.sync = @getSync model
+
   m = Model.extend model
   
   return m

@@ -12,6 +12,7 @@ module.exports =
     collectionView: require './collectionView'
 
     createCollection: require './createCollection'
+    getSync: require './getSync'
     alias: require './alias'
 
     middleware:
