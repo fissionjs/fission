@@ -2,7 +2,7 @@ module.exports = (model) ->
 
   if model.sync
       sync = model.sync
-    else if @opts.sync?
+    else if @opts?.sync?
       if typeof @opts.sync is 'function'
         sync = @opts.sync
       else if typeof @opts.sync is 'object'
@@ -10,7 +10,7 @@ module.exports = (model) ->
           sync = @opts.sync.plugin
         else
           throw new Error 'Invalid sync adapter'
-    else
-      sync = require 'ampersand-sync'
+  else
+    sync = require 'ampersand-sync'
 
   return sync
