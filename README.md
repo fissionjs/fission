@@ -13,6 +13,7 @@ var model = fission.model({
   props: {
     text: 'string',
     done: 'boolean',
+    id: 'string'
   },
   url: '/v1/todos'
 });
@@ -107,6 +108,23 @@ fission.modelView({
 });
 
 ```
+
+## Plugins
+
+#### Sync
+Sync methods can be swapped out on initialization of Fission with plugins.
+
+```js
+var Fission = require('fission');
+var LocalStorageSync = require('fission-sync-localstorage');
+var fission = new Fission({
+  sync: LocalStorageSync
+});
+
+```
+
+**fission sync plugins on npm should be prefixed with fission-sync**
+
 
 [travis-url]: https://travis-ci.org/fissionjs/fission
 [travis-image]: https://travis-ci.org/fissionjs/fission.png?branch=master
