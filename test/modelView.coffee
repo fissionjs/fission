@@ -19,3 +19,7 @@ describe '#modelView', ->
     v.should.have.property 'componentConstructor'
     v.should.have.property 'originalSpec'
     done()
+
+  it 'should be correct type', (done) ->
+    v.should.be.type 'function'
+    done()
