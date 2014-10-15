@@ -20,4 +20,4 @@
 
 ## Extras
 
-### [Bundling with Browserify](/fission/tree/master/docs/browserify.md)
+### [Bundling with Browserify](browserify.md)
