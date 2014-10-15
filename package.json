@@ -31,6 +31,7 @@
     "gulp-autowatch": "0.0.1",
     "gulp-coffee": "^2.2.0",
     "gulp-coffeelint": "^0.4.0",
+    "gulp-jshint": "^1.8.5",
     "gulp-mocha": "^0.5.2",
     "gulp-open": "^0.2.8",
     "gulp-rename": "^1.2.0",
