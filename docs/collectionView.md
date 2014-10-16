@@ -3,6 +3,7 @@
 
 collectionView gets an array of `this.items` - the collections' models rendered into their `itemView`.
 
+```js
 var User = require('../models/User');
 
 var UserItem = fission.modelView({
@@ -27,3 +28,4 @@ fission.collectionView({
     return this.items;
   }
 });
+```
