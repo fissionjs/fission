@@ -28,8 +28,7 @@ gulp.task('bundle', function() {
   b.bundle()
     .pipe(source('myapp.js'))
     .pipe(buffer())
-    .pipe(gulp.dest('./public'))
-    .pipe(reload());
+    .pipe(gulp.dest('./public'));
 });
 
 
