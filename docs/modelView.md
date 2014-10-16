@@ -22,5 +22,5 @@ fission.modelView({
 ```
 
 
-The model's ID is taken from the route via [Router](router.md) and passed directly to the API.
+The model's ID is taken from the route via [Router](router.md) and passed directly to the Sync method.
 

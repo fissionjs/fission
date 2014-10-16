@@ -20,3 +20,7 @@ model.text = 'Mr Fission';
 model.save();
 
 ```
+
+Full documentation relating to the Model can be found [here](https://github.com/AmpersandJS/ampersand-model/blob/master/README.md)
+
+When used in a [modelView](modelView.md) the model.id is taken from the view's params, or from the `router.route`.
