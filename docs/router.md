@@ -37,8 +37,19 @@ router.start();
 ```
 
 
-#### Routing
+#### Routing params
 
 Params on routes (/users/:1234) will be passed to the View, and from there passed to the Model.
 
-With a route /users/1234 the router will take the URL param `1234` and pass it to the model as model.id
+With a route /users/1234 the router will take the URL param.id `1234` and pass it to the model as model.id
+
+
+```js
+var router = fission.router;
+var UserView = require('views/UserView');
+
+router.route('/users/:id',{
+  view: UserView,
+  el: 'content'
+});
+
