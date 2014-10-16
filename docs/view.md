@@ -1,5 +1,5 @@
 ## Views
-**fission#view**
+### fission#view
 
 Views are extensions of `React.createClass` with added [sugar](sugar.md).
 

@@ -1,5 +1,5 @@
 ## Sugar
-**Fission #view #modelView #collectionView**
+### Fission #view #modelView #collectionView
 
 Fission uses aliasing to normalize the React API's nomenclature.
 

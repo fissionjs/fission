@@ -1,6 +1,6 @@
 # Getting Started
 
-**Fission is a framework for creating React applications**
+### Fission is a framework for creating React applications
 
 
 A Fission application has three main components:

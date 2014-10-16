@@ -1,5 +1,5 @@
 #### Models
-**fission#model**
+### fission#model
 
 Models are just wrappers around [ampersand models](https://github.com/AmpersandJS/ampersand-model)
 Model properties (Schema) are defined at creation via `props`.
