@@ -29,3 +29,6 @@ fission.collectionView({
   }
 });
 ```
+
+Each Item in the ItemView gets an implicit `key` (`Item.key`) added based on the `Model.id`
+This key is required for React to keep state of the DOM Components.
