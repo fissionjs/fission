@@ -29,4 +29,3 @@ var fission = new Fission({
 });
 
 ```
-

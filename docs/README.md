@@ -4,11 +4,11 @@
 
 
 ### [model](model.md)
+### [router](router.md)
 ### [view](view.md)
 ### [modelView](modelView.md)
-### [router](router.md)
-### [sync](sync.md)
 ### [collectionView](collectionView.md)
+### [sync](sync.md)
 
 
 ## Core

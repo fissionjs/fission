@@ -23,7 +23,7 @@ fission.collectionView({
 
   render: function() {
     if (this.items.length === 0) {
-      return span(null, 'No Useres right now!');
+      return span(null, 'No Users right now!');
     }
     return this.items;
   }
