@@ -10,6 +10,8 @@
 ### [collectionView](collectionView.md)
 ### [sync](sync.md)
 
+## Plugins
+### [plugins](plugins.md)
 
 ## Core
 
