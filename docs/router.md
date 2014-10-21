@@ -53,3 +53,36 @@ router.route('/users/:id',{
   el: 'content'
 });
 
+```
+
+#### Routing options `(Object)`
+
+##### view:
+Fission view
+```
+type: Function / String
+required: true
+```
+
+##### el:
+Element to display the view
+```
+type: String
+required: true
+```
+
+##### title:
+Page title
+```
+type: String
+required: false
+default: null
+```
+
+##### continue:
+Continue to the next route
+```
+type: String
+required: false
+default: false
+```
