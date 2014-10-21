@@ -27,9 +27,8 @@ app.router.start();
 ```
 
 
-
 ### Install
-```shell
+```bash
 $ npm install --save fission
 ```
 
@@ -41,6 +40,38 @@ The [Documentation](docs/README.md) is split out based on action or function nam
 
 ### Contributing
 Please contribute! We especially will accept pull requests for documentation and examples.
+
+### Building
+[gulp](http://gulpjs.com) is use to build.
+
+Build all code, and produce AMD files:
+```bash
+$ gulp
+```
+Build the test bundle:
+```bash
+$ gulp test
+```
+Run the tests in the browser:
+```bash
+$ gulp test:browser
+```
+
+### Testing
+
+Run tests:
+```bash
+$ npm test
+```
+Build tests:
+```bash
+$ gulp test
+```
+Run browser tests:
+```bash
+$ gulp test:browser
+```
+
 
 
 [travis-url]: https://travis-ci.org/fissionjs/fission
