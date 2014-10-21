@@ -3,8 +3,7 @@
 </div>
 #Fission [![NPM version][npm-image]][npm-url]  [![Build Status][travis-image]][travis-url]
 
-
-Fission is a [Reactjs](http://facebook.github.io/react/) framework for creating efficient modular UI applications.
+The [Reactjs](http://facebook.github.io/react/) Toolkit
 
 ```js
 
