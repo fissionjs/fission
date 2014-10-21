@@ -1,4 +1,8 @@
+<div align="center">
+  <img src="https://raw.githubusercontent.com/fissionjs/artwork/master/logo.png" height="150px">
+</div>
 #Fission [![NPM version][npm-image]][npm-url]  [![Build Status][travis-image]][travis-url]
+
 
 Fission is a [Reactjs](http://facebook.github.io/react/) framework for creating efficient modular UI applications.
 
