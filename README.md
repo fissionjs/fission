@@ -36,13 +36,13 @@ $ npm install --save fission
 Please read our [Getting Started](docs/gettingStarted.md) guide and view our [Examples](https://github.com/fissionjs/examples).
 
 ### Documentation
-The [Documentation](docs/README.md) is split out based on action or function name.
+The [Documentation](docs/README.md) is organized by action or function name.
 
 ### Contributing
 Please contribute! We especially will accept pull requests for documentation and examples.
 
 ### Building
-[gulp](http://gulpjs.com) is use to build.
+[gulp](http://gulpjs.com) is used to build.
 
 Build all code, and produce AMD files:
 ```bash
