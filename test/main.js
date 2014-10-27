@@ -7,5 +7,6 @@ module.exports = ({
   model: require('./model'),
   alias: require('./alias'),
   modelView: require('./modelView'),
-  createCollection: require('./createCollection')
+  createCollection: require('./createCollection'),
+  collectionView: require('./collectionView')
 });

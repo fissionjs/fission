@@ -19,7 +19,8 @@ describe('#createCollection', function() {
     inst.isCollection.should.equal(true);
     return done();
   });
-  return it('should extend the model url', function(done) {
+
+  it('should extend the model url', function(done) {
 
     var m = fission.model({
       props: {
