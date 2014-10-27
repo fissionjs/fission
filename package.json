@@ -1,6 +1,6 @@
 {
   "name": "fission",
-  "description": "Fission",
+  "description": "The Reactjs Toolkit",
   "version": "0.0.4",
   "homepage": "http://github.com/wearefractal/fission",
   "repository": {
@@ -50,5 +50,9 @@
       "type": "MIT",
       "url": "http://github.com/wearefractal/fission/raw/master/LICENSE"
     }
+  ],
+  "keywords": [
+    "fission",
+    "reactjs"
   ]
 }
