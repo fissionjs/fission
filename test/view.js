@@ -5,7 +5,6 @@ var fission = require('./fixtures/fissionInstance');
 
 describe('#view', function() {
   it('should produce the right output', function(done) {
-
     var v = fission.view({
       init: function() {},
       mounting: function() {},
