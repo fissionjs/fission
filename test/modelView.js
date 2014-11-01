@@ -25,8 +25,30 @@ describe('#modelView', function() {
     v.should.have.property('originalSpec');
     return done();
   });
-  return it('should be correct type', function(done) {
+  it('should be correct type', function(done) {
     v.should.be.type('function');
     return done();
+  });
+
+  it('should throw an error unless config', function(done) {
+    try {
+      var View = fission.modelView();
+    }
+    catch (e) {
+      should.exist(e);
+      e.message.should.eql('config parameter is required');
+      done();
+    }
+  });
+
+  it('should throw an error unless config.model', function(done) {
+    try {
+      var View = fission.modelView({});
+    }
+    catch (e) {
+      should.exist(e);
+      e.message.should.eql('model attribute is required');
+      done();
+    }
   });
 });

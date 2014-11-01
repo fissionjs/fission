@@ -14,8 +14,8 @@ describe('fission', function() {
     fission.should.have.property('alias');
     fission.should.have.property('createCollection');
     fission.should.have.property('model');
-    fission.opts.should.be['instanceof'](Object);
-    fission.opts.sync.should.be['instanceof'](Object);
+    fission.options.should.be['instanceof'](Object);
+    fission.options.sync.should.be['instanceof'](Object);
     return done();
   });
 });

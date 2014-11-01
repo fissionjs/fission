@@ -3,7 +3,7 @@
 var clone = require('lodash.clone');
 
 function Fission(opts) {
-  this.opts = opts ? clone(opts) : {};
+  this.options = opts ? clone(opts) : {};
 }
 
 Fission.prototype.router = require('./lib/router');

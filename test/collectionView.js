@@ -11,7 +11,7 @@ describe('#collectionView', function() {
     }
     catch (e) {
       should.exist(e);
-      e.message.should.eql('fission#collectionView: no config attributes found');
+      e.message.should.eql('config parameter is required');
       done();
     }
   });
@@ -22,7 +22,7 @@ describe('#collectionView', function() {
     }
     catch (e) {
       should.exist(e);
-      e.message.should.eql('fission#collectionView: model attribute is required');
+      e.message.should.eql('model attribute is required');
       done();
     }
   });
