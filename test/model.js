@@ -6,7 +6,6 @@ var fission = require('./fixtures/fissionInstance');
 
 describe('#model', function() {
   it('should produce a model', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -14,6 +13,8 @@ describe('#model', function() {
       }
     });
     m.should.be.type('function');
+    // TODO: what? why is this checking the prototype chain
+    // and not just the object
     m.__super__.save.should.be.type('function');
     m.__super__.fetch.should.be.type('function');
     m.__super__.destroy.should.be.type('function');
@@ -36,7 +37,6 @@ describe('#model', function() {
     return done();
   });
   it('should not contain elements if not defined in model.props', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -54,7 +54,6 @@ describe('#model', function() {
     return done();
   });
   it('should return an error if error', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -76,7 +75,6 @@ describe('#model', function() {
     return done();
   });
   it('should have default URL if not provided', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -91,7 +89,6 @@ describe('#model', function() {
     return done();
   });
   it('should map model.url to model.urlRoot', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -108,7 +105,6 @@ describe('#model', function() {
     return done();
   });
   it('should set model.url to function', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -125,7 +121,6 @@ describe('#model', function() {
     return done();
   });
   it('should save new data with proxies', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -145,7 +140,6 @@ describe('#model', function() {
     return inst.save();
   });
   it('should not save props not set in model.props', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -161,8 +155,7 @@ describe('#model', function() {
     should.not.exist(inst.age);
     return done();
   });
-  return it('should not save props proxies not set in model.props', function(done) {
-
+  it('should not save props proxies not set in model.props', function(done) {
     var m = fission.model({
       props: {
         firstName: 'string',

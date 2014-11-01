@@ -4,7 +4,7 @@ var should = require('should');
 var fission = require('./fixtures/fissionInstance');
 
 describe('fission', function() {
-  return it('should have expected api', function(done) {
+  it('should have expected api', function(done) {
     fission.should.have.property('router');
     fission.should.have.property('middleware');
     fission.should.have.property('mixins');

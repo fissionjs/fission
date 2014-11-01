@@ -3,8 +3,7 @@
 var fission = require('./fixtures/fissionInstance');
 
 describe('#Fission.alias', function() {
-  return it('should alias correctly', function(done) {
-
+  it('should alias correctly', function(done) {
     var view = {
       init: function() {},
       mounting: function() {},
