@@ -21,13 +21,12 @@ describe('#modelView', function() {
     }
   });
   it('should produce a React view', function(done) {
-    v.should.have.property('componentConstructor');
-    v.should.have.property('originalSpec');
-    return done();
+    v.should.be.instanceof(Function);
+    done();
   });
   it('should be correct type', function(done) {
     v.should.be.type('function');
-    return done();
+    done();
   });
 
   it('should throw an error unless config', function(done) {

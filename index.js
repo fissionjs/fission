@@ -3,6 +3,9 @@
 var clone = require('lodash.clone');
 
 function Fission(opts) {
+  if (!(this instanceof Fission)) {
+    return new Fission(opts);
+  }
   this.options = opts ? clone(opts) : {};
 }
 
@@ -14,6 +17,8 @@ Fission.prototype.collectionView = require('./lib/collectionView');
 Fission.prototype.createCollection = require('./lib/createCollection');
 Fission.prototype.getSync = require('./lib/getSync');
 Fission.prototype.alias = require('./lib/alias');
+
+// TODO: remove all but log
 Fission.prototype.middleware = {
   auth: require('./lib/middleware/auth'),
   clearFB: require('./lib/middleware/clearFB'),

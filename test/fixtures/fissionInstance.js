@@ -2,7 +2,7 @@
 
 var Fission = require('../../');
 
-module.exports = new Fission({
+module.exports = Fission({
   sync: function(method, model, f) {
     return model;
   }

@@ -6,18 +6,17 @@
 </head>
 <body>
   <div id='mocha'></div>
-  <script src='mocha.js'></script>
+  <script type='text/javascript' src='mocha.js'></script>
   <script>
     mocha.ui('bdd');
     mocha.reporter('html');
   </script>
-  <script type="text/javascript" src='phantomjs.shim.js'></script>
-  <script src='main.js'></script>
+  <script type='text/javascript' src='phantomjs.shim.js'></script>
+  <script type='text/javascript' src='main.js'></script>
  <script>
     if (window.mochaPhantomJS) {
       mochaPhantomJS.run();
-    }
-    else {
+    } else {
       mocha.run();
     }
   </script>

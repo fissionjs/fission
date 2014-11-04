@@ -13,8 +13,7 @@ describe('#view', function() {
       render: function() {}
     });
     v.should.be['instanceof'](Function);
-    v.should.have.property('originalSpec');
-    return done();
+    done();
   });
 });
 

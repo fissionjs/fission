@@ -9,7 +9,7 @@ describe('#router', function() {
     router.should.have.property('use');
     router.should.have.property('route');
     router.should.have.property('router');
-    return done();
+    done();
   });
 
   it('should have the correct core API', function(done) {
@@ -23,6 +23,6 @@ describe('#router', function() {
     router.router.should.have.property('dispatch');
     router.router.should.have.property('Context');
     router.router.should.have.property('Route');
-    return done();
+    done();
   });
 });

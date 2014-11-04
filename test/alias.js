@@ -16,6 +16,6 @@ describe('#Fission.alias', function() {
     config.should.have.property('componentDidMount');
     config.should.have.property('componentWillUnmount');
     config.should.have.property('mixins');
-    return done();
+    done();
   });
 });
