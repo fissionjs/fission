@@ -14,7 +14,7 @@ var browserify = require('browserify');
 
 var paths = {
   js: 'lib/**/*.js',
-  jsSrc: './lib/index.js',
+  jsSrc: './index.js',
   test: 'test/main.js'
 };
 var bCache = {};
