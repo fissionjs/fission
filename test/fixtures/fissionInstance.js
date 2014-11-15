@@ -1,8 +1,8 @@
 'use strict';
 
-var Fission = require('../../lib/index');
+var Fission = require('../../');
 
-module.exports = new Fission({
+module.exports = Fission({
   sync: function(method, model, f) {
     return model;
   }

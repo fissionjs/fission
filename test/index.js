@@ -4,7 +4,8 @@ var should = require('should');
 var fission = require('./fixtures/fissionInstance');
 
 describe('fission', function() {
-  return it('should have expected api', function(done) {
+  it('should have expected api', function(done) {
+    should.exist(fission);
     fission.should.have.property('router');
     fission.should.have.property('middleware');
     fission.should.have.property('mixins');
@@ -14,8 +15,9 @@ describe('fission', function() {
     fission.should.have.property('alias');
     fission.should.have.property('createCollection');
     fission.should.have.property('model');
-    fission.opts.should.be['instanceof'](Object);
-    fission.opts.sync.should.be['instanceof'](Object);
-    return done();
+    should.exist(fission.options);
+    fission.options.should.be['instanceof'](Object);
+    fission.options.sync.should.be['instanceof'](Object);
+    done();
   });
 });

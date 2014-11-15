@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = ({
+module.exports = {
   fission: require('./'),
   router: require('./router'),
   view: require('./view'),
@@ -9,4 +9,4 @@ module.exports = ({
   modelView: require('./modelView'),
   createCollection: require('./createCollection'),
   collectionView: require('./collectionView')
-});
+};

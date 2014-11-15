@@ -21,12 +21,33 @@ describe('#modelView', function() {
     }
   });
   it('should produce a React view', function(done) {
-    v.should.have.property('componentConstructor');
-    v.should.have.property('originalSpec');
-    return done();
+    v.should.be.instanceof(Function);
+    done();
   });
-  return it('should be correct type', function(done) {
+  it('should be correct type', function(done) {
     v.should.be.type('function');
-    return done();
+    done();
+  });
+
+  it('should throw an error unless config', function(done) {
+    try {
+      var View = fission.modelView();
+    }
+    catch (e) {
+      should.exist(e);
+      e.message.should.eql('config parameter is required');
+      done();
+    }
+  });
+
+  it('should throw an error unless config.model', function(done) {
+    try {
+      var View = fission.modelView({});
+    }
+    catch (e) {
+      should.exist(e);
+      e.message.should.eql('model attribute is required');
+      done();
+    }
   });
 });

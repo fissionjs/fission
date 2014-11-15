@@ -6,7 +6,6 @@ var fission = require('./fixtures/fissionInstance');
 
 describe('#model', function() {
   it('should produce a model', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -14,6 +13,8 @@ describe('#model', function() {
       }
     });
     m.should.be.type('function');
+    // TODO: what? why is this checking the prototype chain
+    // and not just the object
     m.__super__.save.should.be.type('function');
     m.__super__.fetch.should.be.type('function');
     m.__super__.destroy.should.be.type('function');
@@ -22,7 +23,7 @@ describe('#model', function() {
       firstName: 'Steve',
       lastName: 'Jobz'
     });
-    inst.should.be.instanceOf(Model);
+    inst.should.be['instanceof'](Model);
     inst.firstName.should.equal('Steve');
     inst.lastName.should.equal('Jobz');
     inst.url = '/api/';
@@ -33,10 +34,9 @@ describe('#model', function() {
     inst.set({
       lastName: 'Nash'
     });
-    return done();
+    done();
   });
   it('should not contain elements if not defined in model.props', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -51,10 +51,9 @@ describe('#model', function() {
     inst.firstName.should.equal('Larry');
     inst.lastName.should.equal('Page');
     should.not.exist(inst.age);
-    return done();
+    done();
   });
   it('should return an error if error', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -73,10 +72,9 @@ describe('#model', function() {
     };
     inst.save();
     inst.fetch();
-    return done();
+    done();
   });
   it('should have default URL if not provided', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -88,10 +86,9 @@ describe('#model', function() {
       lastName: 'Page'
     });
     inst.urlRoot.should.equal('/');
-    return done();
+    done();
   });
   it('should map model.url to model.urlRoot', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -105,10 +102,9 @@ describe('#model', function() {
     });
     inst.urlRoot.should.exist;
     inst.urlRoot.should.equal('/api/v2/users');
-    return done();
+    done();
   });
   it('should set model.url to function', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -122,10 +118,9 @@ describe('#model', function() {
     });
     inst.url.should.exist;
     inst.url.should.be.type('function');
-    return done();
+    done();
   });
   it('should save new data with proxies', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -139,13 +134,12 @@ describe('#model', function() {
     inst.on('change', function(data) {
       data.firstName.should.equal('Ellen');
       inst.firstName.should.equal('Ellen');
-      return done();
+      done();
     });
     inst.firstName = 'Ellen';
     return inst.save();
   });
   it('should not save props not set in model.props', function(done) {
-
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -159,10 +153,9 @@ describe('#model', function() {
     });
     inst.firstName.should.equal('Larry');
     should.not.exist(inst.age);
-    return done();
+    done();
   });
-  return it('should not save props proxies not set in model.props', function(done) {
-
+  it('should not save props proxies not set in model.props', function(done) {
     var m = fission.model({
       props: {
         firstName: 'string',
@@ -178,7 +171,7 @@ describe('#model', function() {
     inst.firstName.should.equal('Larry');
     inst.on('change', function(data) {
       should.not.exist(inst.age);
-      return done();
+      done();
     });
     inst.firstName = 'Ellen';
     return inst.save();

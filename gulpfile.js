@@ -14,16 +14,16 @@ var browserify = require('browserify');
 
 var paths = {
   js: 'lib/**/*.js',
-  jsSrc: './lib/index.js',
+  jsSrc: './index.js',
   test: 'test/main.js'
 };
+var bCache = {};
 
 gulp.task('watch', function() {
   autowatch(gulp, paths);
 });
 
 gulp.task('test', function() {
-  var bCache = {};
   var b = browserify('./test/main.js', {
     standalone: 'fission',
     debug: true,
@@ -34,7 +34,7 @@ gulp.task('test', function() {
   b.bundle()
     .pipe(source('main.js'))
     .pipe(buffer())
-    .pipe(sourcemaps.init())
+    .pipe(sourcemaps.init({loadMaps: true}))
     .pipe(sourcemaps.write())
     .pipe(gulp.dest('test/browser'));
 });
@@ -50,7 +50,6 @@ gulp.task('js', function() {
 });
 
 gulp.task('amd', function() {
-  var bCache = {};
   var b = browserify(paths.jsSrc, {
     standalone: 'fission',
     debug: true,
