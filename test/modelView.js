@@ -39,15 +39,4 @@ describe('#modelView', function() {
       done();
     }
   });
-
-  it('should throw an error unless config.model', function(done) {
-    try {
-      var View = fission.modelView({});
-    }
-    catch (e) {
-      should.exist(e);
-      e.message.should.eql('model attribute is required');
-      done();
-    }
-  });
 });
