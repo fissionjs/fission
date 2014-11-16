@@ -9,12 +9,10 @@ var User = require('../models/User');
 var UserItem = fission.modelView({
   model: User,
   render: function(){
-    div({className: "match"},
-    img({src: this.model.get('content')
-    }));
-
+    return DOM.img({
+      src: this.model.get('content')
+    });
   }
-
 });
 
 fission.collectionView({
@@ -23,7 +21,7 @@ fission.collectionView({
 
   render: function() {
     if (this.items.length === 0) {
-      return span(null, 'No Users right now!');
+      return DOM.span(null, 'No Users right now!');
     }
     return this.items;
   }

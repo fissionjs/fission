@@ -1,7 +1,9 @@
 'use strict';
 
 var clone = require('lodash.clone');
+var React = require('react');
 
+// TODO: most of these have nothing to do with the app, dont expose them on the app
 function Fission(opts) {
   if (!(this instanceof Fission)) {
     return new Fission(opts);
@@ -19,6 +21,7 @@ Fission.prototype.getSync = require('./lib/getSync');
 Fission.prototype.alias = require('./lib/alias');
 
 // TODO: remove all but log
+// TODO: ternary
 Fission.prototype.middleware = {
   auth: require('./lib/middleware/auth'),
   clearFB: require('./lib/middleware/clearFB'),
@@ -27,6 +30,9 @@ Fission.prototype.middleware = {
 Fission.prototype.mixins = {
   Listener: require('./lib/ListenerMixin')
 };
-Fission.prototype.React = require('react');
+Fission.prototype.React = React;
+Fission.prototype.DOM = React.DOM;
+Fission.prototype.createFactory = React.createFactory;
+Fission.prototype.PropTypes = React.PropTypes;
 
 module.exports = Fission;

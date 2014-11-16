@@ -7,13 +7,13 @@ The [Reactjs](http://facebook.github.io/react/) Toolkit
 
 ```js
 
-var Fission = require('fission');
-var app = new Fission();
-var DOM = app.React.DOM;
+var fission = require('fission');
+var app = fission();
+var DOM = app.DOM;
 
 var View = app.view({
   render: function () {
-    return DOM.h1({}, 'Fissionjs!');
+    return DOM.h1(null, 'Fissionjs!');
   }
 });
 
@@ -23,7 +23,6 @@ app.router.route('/',{
 });
 
 app.router.start();
-
 ```
 
 
