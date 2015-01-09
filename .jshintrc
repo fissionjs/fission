@@ -16,6 +16,8 @@
   "unused": false,
   "node": true,
   "mocha": true,
+  "expr": true,
+  "laxbreak": true,
   "globals": {
     "describe": false,
     "it": false,
