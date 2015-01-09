@@ -31,7 +31,7 @@ gulp.task('test', function() {
     cache: bCache
   });
 
-  b.bundle()
+  return b.bundle()
     .pipe(source('main.js'))
     .pipe(buffer())
     .pipe(sourcemaps.init({loadMaps: true}))
@@ -40,11 +40,11 @@ gulp.task('test', function() {
 });
 
 gulp.task('test:browser', ['test'], function() {
-  gulp.src('./test/browser/index.html').pipe(open());
+  return gulp.src('./test/browser/index.html').pipe(open());
 });
 
 gulp.task('js', function() {
-  gulp.src(paths.js)
+  return gulp.src(paths.js)
     .pipe(jshint())
     .pipe(jshint.reporter('default'));
 });
@@ -57,13 +57,13 @@ gulp.task('amd', function() {
     cache: bCache
   });
 
-  b.bundle()
-  .pipe(source('fission.js'))
-  .pipe(buffer())
-  .pipe(gulp.dest('dist'))
-  .pipe(uglify())
-  .pipe(rename('fission.min.js'))
-  .pipe(gulp.dest('dist'));
+  return b.bundle()
+    .pipe(source('fission.js'))
+    .pipe(buffer())
+    .pipe(gulp.dest('dist'))
+    .pipe(uglify())
+    .pipe(rename('fission.min.js'))
+    .pipe(gulp.dest('dist'));
 });
 
 gulp.task('default', ['js', 'test', 'amd', 'watch']);
