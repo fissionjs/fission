@@ -26,5 +26,4 @@ describe('#collectionView', function() {
       done();
     }
   });
-
 });
