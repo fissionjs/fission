@@ -16,14 +16,4 @@ describe('#collectionView', function() {
     }
   });
 
-  it('should throw an error unless config.model', function(done) {
-    try {
-      var View = fission.collectionView({});
-    }
-    catch (e) {
-      should.exist(e);
-      e.message.should.eql('model attribute is required');
-      done();
-    }
-  });
 });
