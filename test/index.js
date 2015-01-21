@@ -7,12 +7,10 @@ describe('fission', function() {
   it('should have expected api', function(done) {
     should.exist(fission);
     fission.should.have.property('router');
-    fission.should.have.property('middleware');
     fission.should.have.property('mixins');
     fission.should.have.property('view');
     fission.should.have.property('modelView');
     fission.should.have.property('collectionView');
-    fission.should.have.property('alias');
     fission.should.have.property('createCollection');
     fission.should.have.property('model');
     should.exist(fission.options);
