@@ -1,7 +1,6 @@
 'use strict';
 
 var alias = require('../../lib/util/alias');
-
 var noop = function(){};
 
 describe('alias()', function(){
