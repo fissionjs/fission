@@ -2,7 +2,7 @@
 
 var combineQS = require('../../lib/util/combineQS');
 
-describe('combineQS()', function(){
+describe('util/combineQS()', function(){
   it('should work with an empty object', function(){
     combineQS('http://example.com/yo', {})
       .should.equal('http://example.com/yo');

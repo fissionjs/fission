@@ -5,7 +5,7 @@ var should = require('should');
 var component = require('../../lib/renderables/component');
 var noop = function(){};
 
-describe('component()', function(){
+describe('renderables/component()', function(){
   beforeEach(function(){
     this.container = document.createElement('div');
   });
@@ -13,10 +13,6 @@ describe('component()', function(){
   it('should return a renderable component function', function(){
     // this test makes sure we dont support jsx
     var Component = component({
-      init: function(){
-        done();
-        return {};
-      },
       render: function(){
         return null;
       }

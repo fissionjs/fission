@@ -3,7 +3,7 @@
 var alias = require('../../lib/util/alias');
 var noop = function(){};
 
-describe('alias()', function(){
+describe('util/alias()', function(){
   it('should add a mixin array', function(){
     alias({}).should.eql({mixins: []});
   });
