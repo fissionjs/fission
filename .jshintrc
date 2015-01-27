@@ -6,24 +6,15 @@
   "indent": 2,
   "newcap": false,
   "quotmark": "single",
-  "maxdepth": 5,
+  "maxdepth": 3,
   "maxstatements": 50,
-  "maxlen": 100,
+  "maxlen": 80,
   "eqnull": true,
   "funcscope": true,
   "strict": true,
   "undef": true,
-  "unused": false,
+  "unused": true,
+  "browser": true,
   "node": true,
-  "mocha": true,
-  "expr": true,
-  "laxbreak": true,
-  "globals": {
-    "describe": false,
-    "it": false,
-    "before": false,
-    "beforeEach": false,
-    "after": false,
-    "afterEach": false
-  }
+  "mocha": true
 }
