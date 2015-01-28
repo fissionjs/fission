@@ -3,7 +3,6 @@
 var React = require('react');
 var should = require('should');
 var component = require('../../lib/renderables/component');
-var noop = function(){};
 
 describe('renderables/component()', function(){
   beforeEach(function(){
@@ -67,7 +66,7 @@ describe('renderables/component()', function(){
     React.render(Component(), this.container);
   });
 
-  it('should alias mixins provided in arguments and config in order', function(done){
+  it('should alias mixins in order', function(done){
     // argument mixins should take precedence
     // so the arg mixin init should get called first
     var firstCalled = false;
