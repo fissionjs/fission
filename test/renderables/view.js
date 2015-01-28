@@ -1,8 +1,10 @@
 'use strict';
 
 var should = require('should');
-var router = require('fission-router');
-var view = require('../../lib/renderables/view');
+var fission = require('../../');
+var router = fission.router;
+var view = fission.view;
+var ChildView = fission.ChildView;
 
 describe('renderables/view()', function(){
   beforeEach(function(){
@@ -41,6 +43,40 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test');
+    routerInst.start(this.container);
+  });
+
+  it('should be renderable by a router as a child view', function(done){
+    var routerInst;
+    var View2 = view({
+      mounted: function(){
+        this.getParams().testId.should.equal('123');
+        routerInst.stop();
+        done();
+      },
+      render: function(){
+        return null;
+      }
+    });
+    var View = view({
+      render: function(){
+        return ChildView();
+      }
+    });
+
+    routerInst = router({
+      app: {
+        path: '/test',
+        view: View,
+        children: {
+          childTest: {
+            path: ':testId',
+            view: View2
+          }
+        }
+      }
+    });
+    routerInst.replaceWith('/test/123');
     routerInst.start(this.container);
   });
 
