@@ -1,8 +1,9 @@
 'use strict';
 
-var React = require('react');
 var should = require('should');
-var component = require('../../lib/renderables/component');
+var fission = require('../../');
+var React = fission.React;
+var component = fission.component;
 
 describe('renderables/component()', function(){
   beforeEach(function(){
