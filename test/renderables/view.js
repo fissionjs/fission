@@ -1,6 +1,5 @@
 'use strict';
 
-//var React = require('react');
 var should = require('should');
 var router = require('fission-router');
 var view = require('../../lib/renderables/view');

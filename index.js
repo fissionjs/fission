@@ -14,6 +14,10 @@ module.exports = {
   model: require('./lib/data/model'),
   collection: require('./lib/data/collection'),
 
+  // move some router stuff up
+  ChildView: React.createFactory(Router.ChildView),
+  Link: React.createFactory(Router.Link),
+
   // expose underlying react stuff
   React: React,
   DOM: React.DOM,
