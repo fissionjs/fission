@@ -22,7 +22,7 @@
 </tr>
 </table>
 
-This is undergoing constant rewrites and is still a work in progress. Documentation coming when the API stabilizes.
+This is undergoing constant rewrites and is still a work in progress. Documentation will be done when the API stabilizes. For ideas and planning see [future-fission](https://github.com/contra/future-fission)
 
 ## Usage
 
@@ -30,6 +30,12 @@ This is undergoing constant rewrites and is still a work in progress. Documentat
 
 ```
 npm install fission --save
+```
+
+## Testing
+
+```
+npm test
 ```
 
 ## LICENSE
