@@ -1,7 +1,7 @@
 {
   "name": "fission",
   "description": "The React Toolkit",
-  "version": "0.0.17",
+  "version": "0.1.0",
   "homepage": "http://github.com/fissionjs/fission",
   "repository": "git://github.com/fissionjs/fission.git",
   "author": "Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
