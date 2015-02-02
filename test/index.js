@@ -15,6 +15,11 @@ describe('fission', function(){
     should.exist(fission.collection);
   });
 
+  it('should expose the fission router features', function(){
+    should.exist(fission.ChildView);
+    should.exist(fission.Link);
+  });
+
   it('should expose underlying React features', function(){
     should.exist(fission.React);
     should.exist(fission.DOM);
