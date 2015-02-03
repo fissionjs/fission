@@ -12,6 +12,7 @@
     "ampersand-collection-underscore-mixin": "^1.0.1",
     "ampersand-model": "^4.0.1",
     "ampersand-subcollection": "^2.0.0",
+    "ampersand-sync": "^3.0.3",
     "fission-router": "^0.0.4",
     "is-array": "^1.0.1",
     "lodash.clone": "^3.0.0",
