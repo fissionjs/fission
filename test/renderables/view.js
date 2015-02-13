@@ -43,7 +43,7 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test');
-    routerInst.start(this.container);
+    routerInst.start(this.container, {location: '/'});
   });
 
   it('should be renderable by a router as a child view', function(done){
@@ -77,7 +77,7 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test/123');
-    routerInst.start(this.container);
+    routerInst.start(this.container, {location: '/'});
   });
 
   it('should have router state mixin sugar', function(done){
@@ -116,7 +116,7 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test/456?p=123');
-    routerInst.start(this.container);
+    routerInst.start(this.container, {location: '/'});
   });
 
   it('should have navigation state mixin sugar', function(done){
@@ -143,6 +143,6 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test/456?p=123');
-    routerInst.start(this.container);
+    routerInst.start(this.container, {location: '/'});
   });
 });

@@ -31,7 +31,7 @@
     "lodash.merge": "^3.0.1",
     "mochify": "dylanfm/mochify.js",
     "mochify-istanbul": "^2.1.1",
-    "should": "^4.4.2"
+    "should": "^5.0.0"
   },
   "main": "./index.js",
   "scripts": {

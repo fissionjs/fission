@@ -5,6 +5,10 @@ var merge = require('lodash.merge');
 var fission = require('../../');
 var modelView = fission.modelView;
 var model = fission.model;
+var render = fission.render;
+var React = fission.React;
+var router = fission.router;
+var view = fission.view;
 
 var UserSchema = {
   props: {
@@ -24,6 +28,7 @@ var UserSchema = {
 var User = model(UserSchema);
 
 describe('renderables/modelView()', function(){
+  beforeEach(createRouterContext);
   beforeEach(function(){
     this.container = document.createElement('div');
     this.model = new User({
@@ -46,15 +51,9 @@ describe('renderables/modelView()', function(){
     }
   });
 
-  it('should return a component function when props', function(){
-    var modelInst = this.model;
-
+  it('should return a renderable function', function(){
     var View = modelView({
-      render: function(){
-        should.exist(this.model.firstName);
-        this.model.firstName.should.equal(modelInst.firstName);
-        return this.model.firstName;
-      }
+      render: function(){}
     });
     var virtualNode = View({model: this.model});
     should.exist(virtualNode);
@@ -62,24 +61,38 @@ describe('renderables/modelView()', function(){
     virtualNode.type.should.equal(View.type);
   });
 
-  it('should return a component function when config', function(){
+  it('should return a component function when props', function(done){
+    var modelInst = this.model;
+
+    var View = modelView({
+      render: function(){
+        should.exist(this.model);
+        should.exist(this.model.firstName);
+        this.model.firstName.should.equal(modelInst.firstName);
+        done();
+        return null;
+      }
+    });
+    render(View({model: this.model}), this.container);
+  });
+
+  it('should return a component function when config', function(done){
     var modelInst = this.model;
 
     var View = modelView({
       model: this.model,
       render: function(){
+        should.exist(this.model);
         should.exist(this.model.firstName);
         this.model.firstName.should.equal(modelInst.firstName);
-        return this.model.firstName;
+        done();
+        return null;
       }
     });
-    var virtualNode = View();
-    should.exist(virtualNode);
-    should.exist(virtualNode.type);
-    virtualNode.type.should.equal(View.type);
+    render(View(), this.container);
   });
 
-  it('should return a component function when config schema', function(){
+  it('should return a component function when config schema', function(done){
     var modelInst = this.model;
     var modelConfig = merge({
       data: {
@@ -90,14 +103,31 @@ describe('renderables/modelView()', function(){
     var View = modelView({
       model: modelConfig,
       render: function(){
+        should.exist(this.model);
         should.exist(this.model.firstName);
         this.model.firstName.should.equal(modelInst.firstName);
-        return this.model.firstName;
+        done();
+        return null;
       }
     });
-    var virtualNode = View();
-    should.exist(virtualNode);
-    should.exist(virtualNode.type);
-    virtualNode.type.should.equal(View.type);
+    render(View(), this.container);
   });
 });
+
+function createRouterContext(cb) {
+  var Dummy = view({
+    mounted: function(){
+      React.withContext(this.context, cb);
+    },
+    render: function(){
+      return null;
+    }
+  });
+  var fakeRouter = router({
+    app: {
+      view: Dummy,
+      default: true
+    }
+  });
+  fakeRouter.start(document.createElement('div'), {location: '/'});
+}
