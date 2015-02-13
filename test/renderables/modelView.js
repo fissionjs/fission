@@ -90,6 +90,7 @@ describe('renderables/modelView()', function(){
     var View = modelView({
       model: UserSchema,
       render: function(){
+        console.log(this.model);
         should.exist(this.model.firstName);
         this.model.firstName.should.equal(modelInst).firstName;
         return this.model.firstName;
