@@ -1,13 +1,12 @@
 'use strict';
 
 var should = require('should');
+var merge = require('lodash.merge');
 var fission = require('../../');
-//var router = fission.router;
 var modelView = fission.modelView;
 var model = fission.model;
-//var ChildView = fission.ChildView;
 
-var User = model({
+var UserSchema = {
   props: {
     firstName: 'string',
     lastName: 'string'
@@ -20,7 +19,9 @@ var User = model({
       }
     }
   }
-});
+};
+
+var User = model(UserSchema);
 
 describe('renderables/modelView()', function(){
   beforeEach(function(){
@@ -45,10 +46,13 @@ describe('renderables/modelView()', function(){
     }
   });
 
-  it('should return a renderable component function', function(){
-    // this test makes sure we dont support jsx
+  it('should return a renderable component function when props', function(){
+    var modelInst = this.model;
+
     var View = modelView({
       render: function(){
+        should.exist(this.model.firstName);
+        this.model.firstName.should.equal(modelInst).firstName;
         return this.model.firstName;
       }
     });
@@ -58,11 +62,14 @@ describe('renderables/modelView()', function(){
     virtualNode.type.should.equal(View.type);
   });
 
-  it('should return a renderable component function', function(){
-    // this test makes sure we dont support jsx
+  it('should return a renderable component function when config', function(){
+    var modelInst = this.model;
+
     var View = modelView({
       model: this.model,
       render: function(){
+        should.exist(this.model.firstName);
+        this.model.firstName.should.equal(modelInst).firstName;
         return this.model.firstName;
       }
     });
@@ -72,4 +79,26 @@ describe('renderables/modelView()', function(){
     virtualNode.type.should.equal(View.type);
   });
 
+  it('should return a renderable component function when config schema', function(){
+    var modelInst = this.model;
+    var modelConfig = merge({
+      data: {
+        firstName: 'Donny',
+        lastName: 'Seinfeld'
+      }
+    }, UserSchema);
+    var View = modelView({
+      model: UserSchema,
+      render: function(){
+        console.log(this.model);
+        should.exist(this.model.firstName);
+        this.model.firstName.should.equal(modelInst).firstName;
+        return this.model.firstName;
+      }
+    });
+    var virtualNode = View();
+    should.exist(virtualNode);
+    should.exist(virtualNode.type);
+    virtualNode.type.should.equal(View.type);
+  });
 });
