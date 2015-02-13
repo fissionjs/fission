@@ -1,23 +1,31 @@
 'use strict';
 
+var fission = require('../');
 var should = require('should');
-var fission = require('./fixtures/fissionInstance');
 
-describe('fission', function() {
-  it('should have expected api', function(done) {
+describe('fission', function(){
+  it('should expose the fission features', function(){
     should.exist(fission);
-    fission.should.have.property('router');
-    fission.should.have.property('middleware');
-    fission.should.have.property('mixins');
-    fission.should.have.property('view');
-    fission.should.have.property('modelView');
-    fission.should.have.property('collectionView');
-    fission.should.have.property('alias');
-    fission.should.have.property('createCollection');
-    fission.should.have.property('model');
-    should.exist(fission.options);
-    fission.options.should.be['instanceof'](Object);
-    fission.options.sync.should.be['instanceof'](Object);
-    done();
+    should.exist(fission.router);
+    should.exist(fission.component);
+    should.exist(fission.view);
+    should.exist(fission.modelView);
+    should.exist(fission.collectionView);
+    should.exist(fission.model);
+    should.exist(fission.collection);
+  });
+
+  it('should expose the fission router features', function(){
+    should.exist(fission.ChildView);
+    should.exist(fission.Link);
+  });
+
+  it('should expose underlying React features', function(){
+    should.exist(fission.React);
+    should.exist(fission.DOM);
+    should.exist(fission.createElement);
+    should.exist(fission.createFactory);
+    should.exist(fission.PropTypes);
+    should.exist(fission.render);
   });
 });

@@ -16,5 +16,8 @@ results
 npm-debug.log
 node_modules
 *.sublime*
-
-test/browser/main.js
+*.node
+coverage
+*.orig
+.idea
+sandbox
