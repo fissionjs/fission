@@ -46,13 +46,13 @@ describe('renderables/modelView()', function(){
     }
   });
 
-  it('should return a renderable component function when props', function(){
+  it('should return a component function when props', function(){
     var modelInst = this.model;
 
     var View = modelView({
       render: function(){
         should.exist(this.model.firstName);
-        this.model.firstName.should.equal(modelInst).firstName;
+        this.model.firstName.should.equal(modelInst.firstName);
         return this.model.firstName;
       }
     });
@@ -62,14 +62,14 @@ describe('renderables/modelView()', function(){
     virtualNode.type.should.equal(View.type);
   });
 
-  it('should return a renderable component function when config', function(){
+  it('should return a component function when config', function(){
     var modelInst = this.model;
 
     var View = modelView({
       model: this.model,
       render: function(){
         should.exist(this.model.firstName);
-        this.model.firstName.should.equal(modelInst).firstName;
+        this.model.firstName.should.equal(modelInst.firstName);
         return this.model.firstName;
       }
     });
@@ -79,7 +79,7 @@ describe('renderables/modelView()', function(){
     virtualNode.type.should.equal(View.type);
   });
 
-  it('should return a renderable component function when config schema', function(){
+  it('should return a component function when config schema', function(){
     var modelInst = this.model;
     var modelConfig = merge({
       data: {
@@ -88,11 +88,10 @@ describe('renderables/modelView()', function(){
       }
     }, UserSchema);
     var View = modelView({
-      model: UserSchema,
+      model: modelConfig,
       render: function(){
-        console.log(this.model);
         should.exist(this.model.firstName);
-        this.model.firstName.should.equal(modelInst).firstName;
+        this.model.firstName.should.equal(modelInst.firstName);
         return this.model.firstName;
       }
     });
