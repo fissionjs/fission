@@ -43,7 +43,7 @@ describe('renderables/view()', function(){
       }
     });
     routerInst.replaceWith('/test');
-    routerInst.start(this.container, {location: '/'});
+    routerInst.start(this.container);
   });
 
   it('should be renderable by a router as a child view', function(done){

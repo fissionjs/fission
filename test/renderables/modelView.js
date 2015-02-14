@@ -1,7 +1,6 @@
 'use strict';
 
 var should = require('should');
-var merge = require('lodash.merge');
 var fission = require('../../');
 var modelView = fission.modelView;
 var model = fission.model;
@@ -94,14 +93,12 @@ describe('renderables/modelView()', function(){
 
   it('should return a component function when config schema', function(done){
     var modelInst = this.model;
-    var modelConfig = merge({
+    var View = modelView({
       data: {
         firstName: 'Donny',
         lastName: 'Seinfeld'
-      }
-    }, UserSchema);
-    var View = modelView({
-      model: modelConfig,
+      },
+      model: UserSchema,
       render: function(){
         should.exist(this.model);
         should.exist(this.model.firstName);
@@ -117,6 +114,7 @@ describe('renderables/modelView()', function(){
 function createRouterContext(cb) {
   var Dummy = view({
     mounted: function(){
+      fakeRouter.stop();
       React.withContext(this.context, cb);
     },
     render: function(){
@@ -126,7 +124,7 @@ function createRouterContext(cb) {
   var fakeRouter = router({
     app: {
       view: Dummy,
-      default: true
+      path: '/'
     }
   });
   fakeRouter.start(document.createElement('div'), {location: '/'});
