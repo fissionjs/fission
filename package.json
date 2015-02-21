@@ -12,7 +12,7 @@
     "ampersand-model": "^4.0.1",
     "ampersand-subcollection": "^2.0.0",
     "ampersand-sync": "^3.0.3",
-    "fission-router": "^0.0.6",
+    "fission-router": "https://github.com/fissionjs/fission-router/archive/master.tar.gz",
     "is-array": "^1.0.1",
     "lodash.clone": "^3.0.0",
     "lodash.merge": "^3.0.1",
