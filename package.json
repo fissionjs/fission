@@ -22,7 +22,6 @@
     "react": "^0.12.0"
   },
   "devDependencies": {
-    "6to5ify": "^4.0.0",
     "istanbul-coveralls": "^1.0.1",
     "jshint": "^2.5.11",
     "jshint-stylish": "^1.0.0",
@@ -33,10 +32,10 @@
   },
   "main": "./index.js",
   "scripts": {
-    "dev": "mochify --recursive --transform 6to5ify --reporter spec --watch",
+    "dev": "mochify --recursive --reporter spec --watch",
     "lint": "jshint . --exclude node_modules --config .jshintrc --reporter node_modules/jshint-stylish/stylish.js",
-    "test": "npm run-script lint && mochify --recursive --transform 6to5ify --reporter spec",
-    "coveralls": "mochify --recursive --transform 6to5ify --plugin [ mochify-istanbul --exclude '**/+(test|node_modules)/**/*' --report lcov --dir ./coverage ] && istanbul-coveralls"
+    "test": "npm run-script lint && mochify --recursive --reporter spec",
+    "coveralls": "mochify --recursive --plugin [ mochify-istanbul --exclude '**/+(test|node_modules)/**/*' --report lcov --dir ./coverage ] && istanbul-coveralls"
   },
   "engines": {
     "node": ">= 0.10"
