@@ -67,7 +67,7 @@ describe('renderables/component()', function(){
     React.render(Component(), this.container);
   });
 
-  it('should alias mixins in order', function(done){
+  it('should alias mixins provided in both', function(done){
     // argument mixins should take precedence
     // so the arg mixin init should get called first
     var firstCalled = false;

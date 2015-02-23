@@ -7,6 +7,9 @@ describe('util/alias()', function(){
   it('should add a mixin array', function(){
     alias({}).should.eql({mixins: []});
   });
+  it('should keep existing mixin array', function(){
+    alias({mixins:[123]}).should.eql({mixins:[123]});
+  });
 
   it('should correctly alias init', function(){
     alias({
