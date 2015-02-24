@@ -10,7 +10,48 @@ describe('util/alias()', function(){
   it('should keep existing mixin array', function(){
     alias({mixins:[123]}).should.eql({mixins:[123]});
   });
-
+  it('should alias mixins', function(){
+    alias({
+      mixins:[
+        {
+          init: function(){}
+        }
+      ]
+    }).should.eql({
+      mixins:[
+        {
+          mixins: [],
+          getInitialState: function(){}
+        }
+      ]
+    });
+  });
+  it('should recursively alias mixins', function(){
+    alias({
+      mixins:[
+        {
+          mixins: [
+            {
+              init: function(){}
+            }
+          ],
+          init: function(){}
+        }
+      ]
+    }).should.eql({
+      mixins:[
+        {
+          mixins: [
+            {
+              mixins: [],
+              getInitialState: function(){}
+            }
+          ],
+          getInitialState: function(){}
+        }
+      ]
+    });
+  });
   it('should correctly alias init', function(){
     alias({
       init: noop
