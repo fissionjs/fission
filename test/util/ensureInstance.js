@@ -28,6 +28,17 @@ var UserWithCustomId = model({
 });
 
 describe('util/ensureInstance.model()', function(){
+  it('should work with instance', function(){
+    var inst = ensureInstance.model(new UserWithCustomId({
+      _id: 123,
+      name: 'Todd'
+    }));
+    should.exist(inst);
+    inst._id.should.equal(123);
+    inst.test().should.equal(123);
+    inst.name.should.equal('Todd');
+    inst._needsInitialFetch.should.equal(false);
+  });
   it('should work with constructor config', function(){
     var inst = ensureInstance.model(userConfig);
     should.exist(inst);
