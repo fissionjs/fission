@@ -14,6 +14,7 @@ describe('fission', function(){
     should.exist(fission.model);
     should.exist(fission.collection);
     should.exist(fission.classes);
+    should.exist(fission.update);
   });
 
   it('should expose the fission router features', function(){
