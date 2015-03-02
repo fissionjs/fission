@@ -66,7 +66,7 @@ describe('renderables/component()', function(){
     called.should.equal(2);
   });
 
-  it('should return a pure component with immutability helpers', function(){
+  it('should return a component with immutability helpers', function(){
     var called = 0;
     var Component = component({
       init: function() {
@@ -80,7 +80,7 @@ describe('renderables/component()', function(){
         this.updateState({
           a: {
             b: {
-              $set: 456
+              $set: 123
             }
           }
         });
@@ -93,6 +93,31 @@ describe('renderables/component()', function(){
     var inst = fission.render(Component(), this.container);
     inst.trigger();
     called.should.equal(2);
+  });
+
+  it('should return a pure component with immutability helpers', function(){
+    var called = 0;
+    var Component = component({
+      init: function() {
+        return {
+          a: 123
+        };
+      },
+      trigger: function() {
+        this.updateState({
+          a: {
+            $set: 123
+          }
+        });
+      },
+      render: function(){
+        ++called;
+        return DOM.div(null, this.state.a.b);
+      }
+    });
+    var inst = fission.render(Component(), this.container);
+    inst.trigger();
+    called.should.equal(1);
   });
 
   it('should alias input config', function(done){
