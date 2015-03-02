@@ -2,7 +2,6 @@
 
 var should = require('should');
 var fission = require('../../');
-var React = fission.React;
 var component = fission.component;
 
 describe('renderables/component()', function(){
@@ -33,7 +32,7 @@ describe('renderables/component()', function(){
         return null;
       }
     });
-    React.render(Component(), this.container);
+    fission.render(Component(), this.container);
   });
 
   it('should alias mixins provided in config', function(done){
@@ -49,7 +48,7 @@ describe('renderables/component()', function(){
         return null;
       }
     });
-    React.render(Component(), this.container);
+    fission.render(Component(), this.container);
   });
 
   it('should alias mixins provided in arguments', function(done){
@@ -64,7 +63,7 @@ describe('renderables/component()', function(){
         return null;
       }
     }, [initMixin]);
-    React.render(Component(), this.container);
+    fission.render(Component(), this.container);
   });
 
   it('should alias mixins provided in both', function(done){
@@ -91,6 +90,6 @@ describe('renderables/component()', function(){
         return null;
       }
     }, [initMixin2]);
-    React.render(Component(), this.container);
+    fission.render(Component(), this.container);
   });
 });

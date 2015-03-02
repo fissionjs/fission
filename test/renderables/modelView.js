@@ -5,7 +5,6 @@ var fission = require('../../');
 var modelView = fission.modelView;
 var model = fission.model;
 var render = fission.render;
-var React = fission.React;
 var router = fission.router;
 var view = fission.view;
 
@@ -115,7 +114,7 @@ function createRouterContext(cb) {
   var Dummy = view({
     mounted: function(){
       fakeRouter.stop();
-      React.withContext(this.context, cb);
+      fission.withContext(this.context, cb);
     },
     render: function(){
       return null;

@@ -12,6 +12,7 @@
     "ampersand-model": "^4.0.1",
     "ampersand-subcollection": "^2.0.0",
     "ampersand-sync": "^3.0.3",
+    "classnames": "^1.1.4",
     "fission-router": "https://github.com/fissionjs/fission-router/archive/master.tar.gz",
     "insert-css": "^0.2.0",
     "is-array": "^1.0.1",
