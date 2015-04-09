@@ -1,6 +1,6 @@
 # Component Documentation
 
-Creates a React component. `fission.component` is different from `React.createClass` in a few ways - this will document the differences, for any other behavior you should consult the React documentation.
+Creates a React component. `fission.component` is different from `React.createClass` in a few ways - this will document the differences, for any other behavior you should consult the [React documentation](https://facebook.github.io/react/docs/component-specs.html).
 
 ## fission.component(config)
 
@@ -39,13 +39,13 @@ var Timer = fission.component({
 
 ### Configuration
 
-The configuration object you pass as an argument to fission.component is the same object you would pass to React.createClass, but with a few added aliases and nice things.
+The configuration object you pass to fission.component is the [same object you would pass to React.createClass](https://facebook.github.io/react/docs/component-specs.html), but with a few added aliases and nice things.
 
 #### props
 
 Type: `object`
 
-This object is used to validate properties passed to the component. Alias for `propTypes`. Used in conjuction with `fission.PropTypes` which is an alias for `React.PropTypes`
+This object is used to validate properties passed to the component. Alias for [propTypes](https://facebook.github.io/react/docs/component-specs.html#proptypes). Used in conjuction with `fission.PropTypes` which is an alias for [React.PropTypes](https://facebook.github.io/react/docs/reusable-components.html)
 
 ```js
 var fission = require('fission');
@@ -68,7 +68,7 @@ var DummyUser = fission.component({
 
 Type: `function`
 
-This function is called to get the default state before attempting to mount. Alias for `getInitialState`.
+This function is called to get the default state before attempting to mount. Alias for [getInitialState](https://facebook.github.io/react/docs/component-specs.html#getinitialstate).
 
 ```js
 var fission = require('fission');
@@ -90,7 +90,7 @@ var DummyComponent = fission.component({
 
 Type: `function`
 
-This function is called when your component is preparing to mount. Alias for `componentWillMount`.
+This function is called when your component is preparing to mount. Alias for [componentWillMount](https://facebook.github.io/react/docs/component-specs.html#componentwillmount).
 
 ```js
 var fission = require('fission');
@@ -108,7 +108,7 @@ var DummyComponent = fission.component({
 
 Type: `function`
 
-This function is called when your component has been mounted. Alias for `componentDidMount`.
+This function is called when your component has been mounted. Alias for [componentDidMount](https://facebook.github.io/react/docs/component-specs.html#componentdidmount).
 
 ```js
 var fission = require('fission');
@@ -126,7 +126,7 @@ var DummyComponent = fission.component({
 
 Type: `function`
 
-This function is called when your component is preparing to unmount (be destroyed). Alias for `componentWillUnmount`.
+This function is called when your component is preparing to unmount (be destroyed). Alias for [componentWillUnmount](https://facebook.github.io/react/docs/component-specs.html#componentwillunmount).
 
 ```js
 var fission = require('fission');
