@@ -45,7 +45,7 @@ The configuration object you pass as an argument to fission.component is the sam
 
 Type: `object`
 
-This object is used to validate properties passed to the component. Alias for `propTypes`. Used in conjuctin with `fission.PropTypes` which is an alias for `React.PropTypes`
+This object is used to validate properties passed to the component. Alias for `propTypes`. Used in conjunction with `fission.PropTypes` which is an alias for `React.PropTypes`
 
 ```js
 var fission = require('fission');
