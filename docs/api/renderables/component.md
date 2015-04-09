@@ -45,7 +45,7 @@ The configuration object you pass as an argument to fission.component is the sam
 
 Type: `object`
 
-This object is used to validate properties passed to the component. Alias for `propTypes`. Used in conjuctin with `fission.PropTypes` which is an alias for `React.PropTypes`
+This object is used to validate properties passed to the component. Alias for `propTypes`. Used in conjuction with `fission.PropTypes` which is an alias for `React.PropTypes`
 
 ```js
 var fission = require('fission');
@@ -140,13 +140,13 @@ var DummyComponent = fission.component({
 });
 ```
 
-### css
+#### css
 
 Type: `string`
 
 On first mount of your component, this CSS for it will be added to the page. This makes it easy to modularize your stylesheets per-component and also ensures that style conflicts don't happen between components.
 
-#### Using a string
+##### Using a string
 
 ```js
 var fission = require('fission');
@@ -164,7 +164,7 @@ var DummyComponent = fission.component({
 });
 ```
 
-#### Using a pre-processor
+##### Using a pre-processor
 
 You don't want to put a bunch of CSS in your JS file, so you will probably use some browserify middleware. This example uses stylify which compiles the stylus into CSS and exports it as a string.
 
@@ -179,6 +179,94 @@ var DummyComponent = fission.component({
     return DOM.div({
       className: 'dummy-component'
     }, 'Hello World!');
+  }
+});
+```
+
+### Pure Rendering
+
+By default, React will re-render on any state or prop change even if the value is the same.
+
+```js
+// Re-renders 3 times
+this.setState({a: 123});
+this.setState({a: 123});
+this.setState({a: 123});
+```
+
+fission employs a new `shouldComponentUpdate` function that ensures your component won't re-render unless there has actually been a state or prop change - even on nested objects and arrays (or arrays of objects with objects of arrays of objects, you get the point).
+
+```js
+var fission = require('fission');
+
+var Counter = fission.component({
+  impure: true,
+  init: function(){
+    return {
+      count: 0
+    };
+  },
+  mounted: function(){
+    // Calls render 1 time
+    this.setState({count: 123});
+    this.setState({count: 123});
+    this.setState({count: 123});
+  },
+  // ...
+});
+```
+
+Make sure your render function only gets its data from sanctioned source: (`this.props`, `this.state`, `this.items`, `this.model`, etc.).
+
+If for some reason you absolutely need to disable this behavior (you have global state), you can mark your component as impure.
+
+```js
+var fission = require('fission');
+
+var Counter = fission.component({
+  impure: true,
+  init: function(){
+    return {
+      count: 0
+    };
+  },
+  mounted: function(){
+    // Calls render 3 times
+    this.setState({count: 123});
+    this.setState({count: 123});
+    this.setState({count: 123});
+  },
+  // ...
+});
+```
+
+### Immutability Helpers
+
+fission incorporates the React immutability helpers into the core of it's component system.
+
+Components have access to an `updateState` function that lets you perform high-performance immutable operations on component state. This makes it extremely easy to update nested state which helps the Pure rendering mechanism determine if a render is needed.
+
+```js
+var fission = require('fission');
+var DOM = fission.DOM;
+
+var Counter = fission.component({
+  init: function(){
+    return {
+      count: 0
+    };
+  },
+  increment: function(){
+    this.updateState({
+      count: function(curr) {
+        return ++curr;
+      }
+    });
+  },
+  render: function(){
+    return DOM.div({
+      onClick: this.increment
+    }, this.state.count);
   }
 });
 ```
