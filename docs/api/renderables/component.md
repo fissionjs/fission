@@ -63,6 +63,28 @@ var DummyUser = fission.component({
 });
 ```
 
+#### init
+
+Type: `function`
+
+This function is called to get the default state before attempting to mount. Alias for `getInitialState`.
+
+```js
+var fission = require('fission');
+
+var DummyComponent = fission.component({
+  init: function(){
+    return {
+      elapsed: 123
+    };
+  },
+  mounting: function(){
+    console.log(this.state.elapsed); // 123
+  }
+  // ...
+});
+```
+
 #### mounting
 
 Type: `function`
@@ -117,24 +139,45 @@ var DummyComponent = fission.component({
 });
 ```
 
-#### init
+### css
 
-Type: `function`
+Type: `string`
 
-This function is called to get the default state before attempting to mount. Alias for `getInitialState`.
+On first mount of your component, this CSS for it will be added to the page. This makes it easy to modularize your stylesheets per-component and also ensures that style conflicts don't happen between components.
+
+#### Using a string
 
 ```js
 var fission = require('fission');
+var DOM = fission.DOM;
+
+var styles = '.dummy-component { font-size: 20px; }';
 
 var DummyComponent = fission.component({
-  init: function(){
-    return {
-      elapsed: 123
-    };
-  },
-  mounting: function(){
-    console.log(this.state.elapsed); // 123
+  css: styles,
+  render: function(){
+    return DOM.div({
+      className: 'dummy-component'
+    }, 'Hello World!');
   }
-  // ...
+});
+```
+
+#### Using a pre-processor
+
+You don't want to put a bunch of CSS in your JS file, so you will probably use some browserify middleware. This example uses stylify which compiles the stylus into CSS and exports it as a string.
+
+```js
+var fission = require('fission');
+var styles = require('./DummyComponent.styl');
+var DOM = fission.DOM;
+
+var DummyComponent = fission.component({
+  css: styles,
+  render: function(){
+    return DOM.div({
+      className: 'dummy-component'
+    }, 'Hello World!');
+  }
 });
 ```
