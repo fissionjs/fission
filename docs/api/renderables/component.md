@@ -200,7 +200,6 @@ fission employs a new `shouldComponentUpdate` function that ensures your compone
 var fission = require('fission');
 
 var Counter = fission.component({
-  impure: true,
   init: function(){
     return {
       count: 0
