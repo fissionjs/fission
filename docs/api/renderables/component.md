@@ -14,18 +14,19 @@ var Timer = fission.component({
       elapsed: 0
     };
   },
+  mounted: function(){
+    this.interval = setInterval(this.tick, 1000);
+  },
+  unmounting: function(){
+    clearInterval(this.interval);
+  },
+
   tick: function(){
     this.updateState({
       elapsed: function(curr) {
         return ++curr;
       }
     });
-  },
-  mounted: function(){
-    this.interval = setInterval(this.tick, 1000);
-  },
-  unmounting: function(){
-    clearInterval(this.interval);
   },
   render: function(){
     var elapsedTxt = 'Seconds Elapsed: ' + this.state.elapsed;
