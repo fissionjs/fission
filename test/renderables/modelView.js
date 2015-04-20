@@ -9,7 +9,7 @@ var router = fission.router;
 var view = fission.view;
 
 var UserSchema = {
-  url: '/v1/users',
+  urlRoot: '/v1/users',
   props: {
     firstName: 'string',
     lastName: 'string'

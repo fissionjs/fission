@@ -6,7 +6,7 @@ var model = require('../../lib/data/model');
 var collection = require('../../lib/data/model');
 
 var userConfig = {
-  url: '/api/users',
+  urlRoot: '/api/users',
   props: {
     name: 'string'
   },
@@ -17,7 +17,7 @@ var userConfig = {
 var User = model(userConfig);
 var UserWithCustomId = model({
   idAttribute: '_id',
-  url: '/api/users',
+  urlRoot: '/api/users',
   props: {
     _id: 'number',
     name: 'string'
