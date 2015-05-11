@@ -12,7 +12,7 @@
     "ampersand-model": "^5.0.0",
     "ampersand-subcollection": "^2.0.0",
     "ampersand-sync": "^3.0.3",
-    "classnames": "^1.1.4",
+    "classnames": "^2.1.1",
     "fission-router": "https://github.com/fissionjs/fission-router/archive/master.tar.gz",
     "insert-css": "^0.2.0",
     "is-array": "^1.0.1",
@@ -30,7 +30,7 @@
     "lodash.merge": "^3.0.1",
     "mochify": "dylanfm/mochify.js",
     "mochify-istanbul": "^2.1.1",
-    "should": "^5.0.0"
+    "should": "^6.0.0"
   },
   "main": "./index.js",
   "scripts": {
