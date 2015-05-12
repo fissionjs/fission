@@ -12,7 +12,8 @@ var collection = require('./lib/data/collection');
 var classNames = require('classnames');
 
 var ReactUpdates = require('react/lib/ReactUpdates');
-ReactUpdates.injection.injectBatchingStrategy(require('./lib/util/RAFBatching'));
+var RAFBatch = require('./lib/util/RAFBatching');
+ReactUpdates.injection.injectBatchingStrategy(RAFBatch);
 
 module.exports = {
   router: Router,
