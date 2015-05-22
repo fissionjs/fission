@@ -9,7 +9,7 @@
     "ampersand-collection": "^1.3.13",
     "ampersand-collection-lodash-mixin": "^2.0.1",
     "ampersand-collection-rest-mixin": "^4.0.0",
-    "ampersand-local-cache-mixin": "https://github.com/contra/ampersand-local-cache-mixin/archive/patch-1.tar.gz",
+    "ampersand-local-cache-mixin": "^3.0.2",
     "ampersand-model": "^5.0.0",
     "ampersand-subcollection": "^2.0.0",
     "ampersand-sync": "^3.0.3",
