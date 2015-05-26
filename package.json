@@ -10,7 +10,7 @@
     "ampersand-collection-lodash-mixin": "^2.0.1",
     "ampersand-collection-rest-mixin": "^4.0.0",
     "ampersand-local-cache-mixin": "^3.0.2",
-    "ampersand-model": "^5.0.0",
+    "ampersand-model": "contra/ampersand-model",
     "ampersand-subcollection": "^2.0.0",
     "ampersand-sync": "^3.0.3",
     "classnames": "^2.1.1",
