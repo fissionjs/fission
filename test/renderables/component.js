@@ -41,7 +41,9 @@ describe('renderables/component()', function(){
     });
     var inst = fission.render(Component(), this.container);
     inst.trigger();
-    called.should.equal(1);
+    setTimeout(function(){
+      called.should.equal(1);
+    }, 100);
   });
 
   it('should return a impure component when asked', function(){
@@ -63,7 +65,9 @@ describe('renderables/component()', function(){
     });
     var inst = fission.render(Component(), this.container);
     inst.trigger();
-    called.should.equal(2);
+    setTimeout(function(){
+      called.should.equal(2);
+    }, 100);
   });
 
   it('should return a component with immutability helpers', function(){
@@ -92,7 +96,9 @@ describe('renderables/component()', function(){
     });
     var inst = fission.render(Component(), this.container);
     inst.trigger();
-    called.should.equal(2);
+    setTimeout(function(){
+      called.should.equal(2);
+    }, 100);
   });
 
   it('should return a pure component with immutability helpers', function(){
@@ -117,7 +123,9 @@ describe('renderables/component()', function(){
     });
     var inst = fission.render(Component(), this.container);
     inst.trigger();
-    called.should.equal(1);
+    setTimeout(function(){
+      called.should.equal(1);
+    }, 100);
   });
 
   it('should alias input config', function(done){

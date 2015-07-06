@@ -18,7 +18,7 @@
     "is-array": "^1.0.1",
     "lodash.clone": "^3.0.0",
     "lodash.merge": "^3.0.1",
-    "raf": "^2.0.4",
+    "raf": "^3.0.0",
     "url": "^0.10.2"
   },
   "peerDependencies": {
@@ -27,16 +27,16 @@
   "devDependencies": {
     "istanbul-coveralls": "^1.0.1",
     "jshint": "^2.5.11",
-    "jshint-stylish": "^1.0.0",
+    "jshint-stylish": "^2.0.0",
     "mochify": "dylanfm/mochify.js",
     "mochify-istanbul": "^2.1.1",
-    "should": "^6.0.0"
+    "should": "^7.0.0"
   },
   "main": "./index.js",
   "scripts": {
     "dev": "mochify --recursive --reporter spec --watch",
     "dev-coverage": "mochify --recursive --plugin [ mochify-istanbul --exclude '**/+(test|node_modules)/**/*' --dir ./coverage ]",
-    "lint": "jshint index.js lib --exclude node_modules --config .jshintrc --reporter node_modules/jshint-stylish/stylish.js",
+    "lint": "jshint index.js lib --exclude node_modules --config .jshintrc --reporter node_modules/jshint-stylish/index.js",
     "test": "npm run-script lint && mochify --recursive --reporter spec",
     "coveralls": "mochify --recursive --plugin [ mochify-istanbul --exclude '**/+(test|node_modules)/**/*' --report lcov --dir ./coverage ] && istanbul-coveralls"
   },
