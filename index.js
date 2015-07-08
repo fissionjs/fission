@@ -5,10 +5,6 @@ var Router = require('fission-router');
 var update = require('react/lib/update');
 var component = require('./lib/renderables/component');
 var view = require('./lib/renderables/view');
-var modelView = require('./lib/renderables/modelView');
-var collectionView = require('./lib/renderables/collectionView');
-var model = require('./lib/data/model');
-var collection = require('./lib/data/collection');
 var classNames = require('classnames');
 
 var ReactUpdates = require('react/lib/ReactUpdates');
@@ -21,13 +17,7 @@ module.exports = {
   // renderables
   component: component,
   view: view,
-  modelView: modelView,
-  collectionView: collectionView,
   DOM: React.DOM,
-
-  // data stuff
-  model: model,
-  collection: collection,
 
   // move some react-router stuff up
   ChildView: Router.ChildView,

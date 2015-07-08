@@ -9,10 +9,6 @@ describe('fission', function(){
     should.exist(fission.router);
     should.exist(fission.component);
     should.exist(fission.view);
-    should.exist(fission.modelView);
-    should.exist(fission.collectionView);
-    should.exist(fission.model);
-    should.exist(fission.collection);
     should.exist(fission.classes);
     should.exist(fission.update);
   });
