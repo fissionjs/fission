@@ -10,12 +10,16 @@ describe('fission', function(){
     should.exist(fission.component);
     should.exist(fission.view);
     should.exist(fission.classes);
-    should.exist(fission.update);
   });
 
   it('should expose the fission router features', function(){
     should.exist(fission.ChildView);
     should.exist(fission.Link);
+  });
+
+  it('should expose the fission motion features', function(){
+    should.exist(fission.Spring);
+    should.exist(fission.TransitionSpring);
   });
 
   it('should expose underlying React features', function(){

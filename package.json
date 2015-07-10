@@ -7,16 +7,18 @@
   "author": "Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
   "dependencies": {
     "classnames": "^2.1.1",
-    "fission-router": "https://github.com/fissionjs/fission-router/archive/13.tar.gz",
     "insert-css": "^0.2.0",
     "is-array": "^1.0.1",
     "lodash.clone": "^3.0.0",
     "lodash.merge": "^3.0.1",
+    "object-assign": "^3.0.0",
     "raf": "^3.0.0",
+    "react-motion": "0.0.3",
+    "react-router": "^0.13.3",
     "url": "^0.10.2"
   },
   "peerDependencies": {
-    "react": "^0.12.0"
+    "react": "^0.13.0"
   },
   "devDependencies": {
     "istanbul-coveralls": "^1.0.1",

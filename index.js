@@ -1,34 +1,35 @@
 'use strict';
 
-var React = require('react');
-var Router = require('fission-router');
-var update = require('react/lib/update');
+var React = require('react/addons');
+var motion = require('react-motion');
+var classes = require('classnames');
+
 var component = require('./lib/renderables/component');
 var view = require('./lib/renderables/view');
-var classNames = require('classnames');
+var router = require('./lib/router');
 
 var ReactUpdates = require('react/lib/ReactUpdates');
 var RAFBatch = require('./lib/util/RAFBatching');
 ReactUpdates.injection.injectBatchingStrategy(RAFBatch);
 
 module.exports = {
-  router: Router,
-
   // renderables
   component: component,
   view: view,
-  DOM: React.DOM,
 
-  // move some react-router stuff up
-  ChildView: Router.ChildView,
-  Link: Router.Link,
+  // router stuff
+  router: router,
+  ChildView: router.ChildView,
+  Link: router.Link,
 
-  // some utils
-  classes: classNames,
-  update: update,
+  // bundled utils
+  classes: classes,
+  Spring: motion,
+  TransitionSpring: motion.TransitionSpring,
 
   // expose underlying react stuff
   React: React,
+  DOM: React.DOM,
   createElement: React.createElement,
   createFactory: React.createFactory,
   PropTypes: React.PropTypes,
