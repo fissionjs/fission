@@ -1,3 +1,0 @@
-# Collection View Documentation
-
-TODO
